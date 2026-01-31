@@ -46,15 +46,18 @@ function GAD7View({ onBack, onChat }) {
         setShowResult(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // ENHANCEMENT: Save result (requires login)
+        // Save result (always show result first, save is secondary)
         saveAssessmentResult('gad7', res).then(saved => {
-          if (saved.success) {
-            console.log('GAD-7 result saved:', saved.data);
+          if (saved.success && !saved.savedLocally) {
+            console.log('GAD-7 result saved to database:', saved.data);
             setSaveStatus('success');
+          } else if (saved.success && saved.savedLocally) {
+            console.log('GAD-7 result saved locally:', saved.data);
+            setSaveStatus(saved.requiresLogin ? 'saved_local_login' : 'saved_local');
           } else if (saved.requiresLogin) {
             setSaveStatus('requires_login');
           } else {
-            setSaveStatus('error');
+            setSaveStatus('saved_local');
           }
         });
       }
@@ -108,7 +111,14 @@ function GAD7View({ onBack, onChat }) {
         {saveStatus === 'success' && (
           <div className="mt-6 bg-green-50 border-2 border-green-200 rounded-2xl p-4 flex items-center gap-3">
             <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
-            <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan!</p>
+            <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan ke akun!</p>
+          </div>
+        )}
+
+        {(saveStatus === 'saved_local' || saveStatus === 'saved_local_login') && (
+          <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 flex items-center gap-3">
+            <CheckCircle2 size={20} className="text-blue-600 flex-shrink-0" />
+            <p className="text-sm font-bold text-blue-800">Hasil tes tersimpan di perangkat ini.</p>
           </div>
         )}
 

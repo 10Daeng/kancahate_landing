@@ -138,7 +138,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
       case 'GAD7':
         if (result.score <= 4) return { label: 'Kecemasan Minimal', emoji: '😊', color: '#16a34a', bg: '#dcfce7', desc: 'Kondisimu baik-baik saja' };
         if (result.score <= 9) return { label: 'Kecemasan Ringan', emoji: '😌', color: '#84cc16', bg: '#bef264', desc: 'Tingkat kecemasan ringan' };
-        if (result <= 14) return { label: 'Kecemasan Sedang', emoji: '😟', color: '#f59e0b', bg: '#fed7aa', desc: 'Perlu perhatian khusus' };
+        if (result.score <= 14) return { label: 'Kecemasan Sedang', emoji: '😟', color: '#f59e0b', bg: '#fed7aa', desc: 'Perlu perhatian khusus' };
         return { label: 'Kecemasan Berat', emoji: '😰', color: '#dc2626', bg: '#fecaca', desc: 'Segera cari bantuan' };
       case 'PSS10':
         if (result.score <= 13) return { label: 'Stres Rendah', emoji: '😊', color: '#16a34a', bg: '#dcfce7', desc: 'Tingkat stres rendah' };

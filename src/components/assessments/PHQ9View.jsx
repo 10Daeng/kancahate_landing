@@ -58,15 +58,20 @@ function PHQ9View({ onBack, onChat }) {
         setShowResult(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Save result
+        // Save result (always show result first, save is secondary)
         saveAssessmentResult('phq9', phq9Result).then((saved) => {
-          if (saved.success) {
-            console.log('PHQ-9 result saved:', saved.data);
+          if (saved.success && !saved.savedLocally) {
+            console.log('PHQ-9 result saved to database:', saved.data);
             setSaveStatus('success');
+          } else if (saved.success && saved.savedLocally) {
+            console.log('PHQ-9 result saved locally:', saved.data);
+            setSaveStatus(saved.requiresLogin ? 'saved_local_login' : 'saved_local');
           } else if (saved.requiresLogin) {
             setSaveStatus('requires_login');
           } else {
-            setSaveStatus('error');
+            // Even on error, result is shown - this is just for save status
+            console.warn('PHQ-9 save issue:', saved.message);
+            setSaveStatus('saved_local');
           }
         });
       }
@@ -78,7 +83,7 @@ function PHQ9View({ onBack, onChat }) {
   };
 
   if (showResult && result) {
-    return <PHQ9Result result={result} onBack={onBack} onChat={onChat} saveStatus={saveStatus} />;
+    return <PHQ9Result result={result} onBack={onBack} onChat={onChat} saveStatus={saveStatus} completedAt={completedAt} />;
   }
 
   return (
@@ -195,7 +200,7 @@ function PHQ9View({ onBack, onChat }) {
 /**
  * PHQ-9 Result Component
  */
-function PHQ9Result({ result, onBack, onChat, saveStatus }) {
+function PHQ9Result({ result, onBack, onChat, saveStatus, completedAt }) {
   const { score, maxScore, severity, color, gradient, emoji, description, recommendations, crisisAlert } = result;
 
   return (
@@ -290,12 +295,18 @@ function PHQ9Result({ result, onBack, onChat, saveStatus }) {
       </div>
 
       {/* Save Status Messages */}
-      {saveStatus === 'requires_login' && (
+      {(saveStatus === 'requires_login' || saveStatus === 'saved_local_login') && (
         <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-start gap-3">
           <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-bold text-amber-800 mb-1">Login Diperlukan</p>
-            <p className="text-xs text-amber-700 mb-3">Silakan login untuk menyimpan hasil tes kamu secara permanen.</p>
+            <p className="text-sm font-bold text-amber-800 mb-1">
+              {saveStatus === 'saved_local_login' ? '✓ Hasil Tersimpan di Perangkat' : 'Login Diperlukan'}
+            </p>
+            <p className="text-xs text-amber-700 mb-3">
+              {saveStatus === 'saved_local_login' 
+                ? 'Hasil sudah tersimpan sementara. Login untuk menyimpan ke akun agar tidak hilang.' 
+                : 'Silakan login untuk menyimpan hasil tes kamu secara permanen.'}
+            </p>
             <button
               onClick={() => (window.location.href = '/login')}
               className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-600 transition-colors"
@@ -310,7 +321,14 @@ function PHQ9Result({ result, onBack, onChat, saveStatus }) {
       {saveStatus === 'success' && (
         <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-2xl p-4 flex items-center gap-3">
           <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
-          <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan!</p>
+          <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan ke akun!</p>
+        </div>
+      )}
+
+      {saveStatus === 'saved_local' && (
+        <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 flex items-center gap-3">
+          <CheckCircle2 size={20} className="text-blue-600 flex-shrink-0" />
+          <p className="text-sm font-bold text-blue-800">Hasil tes tersimpan di perangkat ini.</p>
         </div>
       )}
 

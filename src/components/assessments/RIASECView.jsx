@@ -154,7 +154,7 @@ function RIASECView({ onBack, onChat }) {
   }
 
   if (showResult && result) {
-    return <RIASECResult result={result} onBack={onBack} onChat={onChat} saveStatus={saveStatus} />;
+    return <RIASECResult result={result} onBack={onBack} onChat={onChat} saveStatus={saveStatus} completedAt={completedAt} />;
   }
 
   // Show loading while questions are being generated
@@ -300,7 +300,7 @@ function RIASECView({ onBack, onChat }) {
 /**
  * RIASEC Result Component
  */
-function RIASECResult({ result, onBack, onChat, saveStatus }) {
+function RIASECResult({ result, onBack, onChat, saveStatus, completedAt }) {
   const { hollandCode, primaryType, allScores, primaryInfo, typeBreakdown } = result;
 
   // Email collection state
@@ -479,6 +479,13 @@ function RIASECResult({ result, onBack, onChat, saveStatus }) {
         <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-2xl p-4 flex items-center gap-3">
           <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
           <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan!</p>
+        </div>
+      )}
+
+      {saveStatus === 'error' && (
+        <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-2xl p-4 flex items-center gap-3">
+          <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
+          <p className="text-sm font-bold text-red-800">Gagal menyimpan hasil tes. Hasil tetap ditampilkan di bawah.</p>
         </div>
       )}
 

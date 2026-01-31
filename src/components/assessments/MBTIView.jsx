@@ -194,6 +194,13 @@ function MBTIView({ onBack, onChat }) {
             </div>
           )}
 
+          {saveStatus === 'error' && (
+            <div className="mt-6 bg-red-50 border-2 border-red-200 rounded-2xl p-4 flex items-center gap-3">
+              <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
+              <p className="text-sm font-bold text-red-800">Gagal menyimpan hasil tes. Hasil tetap ditampilkan di bawah.</p>
+            </div>
+          )}
+
           {/* Email Collection Section */}
           <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-100 rounded-2xl p-6">
             {!showEmailInput ? (
