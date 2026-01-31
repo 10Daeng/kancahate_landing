@@ -49,7 +49,7 @@ function LoveLanguagesView({ onBack, onChat }) {
     const resultData = {
       title: info.title,
       desc: info.desc,
-      advice: "Tips: Jelaskan bahasa cintamu ke pasanganmu biar dia tahu cara bikin kamu bahagia! ❤️",
+      advice: "Tips: Jelaskan bahasa cintamu ke orang terdekat (sahabat, orang tua, keluarga) biar mereka tahu cara bikin kamu bahagia! ❤️",
       color: info.color || "bg-pink-50 border-pink-200 text-pink-900",
       type: topType,
       scores: typeScores,
