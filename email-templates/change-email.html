@@ -1,0 +1,94 @@
+<!-- 
+  Supabase Email Template: Change Email Address
+  
+  Cara pakai:
+  1. Buka Supabase Dashboard → Settings → Auth → Email Templates
+  2. Pilih tab "Change Email Address"
+  3. Copy paste HTML di bawah ke field "Body (HTML)"
+  4. Update Subject menjadi: Konfirmasi Perubahan Email - Kancah Ate
+  5. Save
+-->
+
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+  
+  <!-- Header with Logo -->
+  <div style="text-align: center; margin-bottom: 30px; padding: 30px 20px; background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%); border-radius: 16px;">
+    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      Kancah Ate
+    </h1>
+    <p style="color: rgba(255,255,255,0.9); margin-top: 8px; font-size: 14px; font-weight: 500;">
+      Teman Cerita & First Aid Kesehatan Mental Remaja
+    </p>
+  </div>
+  
+  <!-- Main Content -->
+  <div style="background: #ffffff; border-radius: 16px; padding: 32px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h2 style="color: #1e293b; margin-top: 0; margin-bottom: 16px; font-size: 24px; font-weight: 700;">
+      Konfirmasi Perubahan Email 📧
+    </h2>
+    <p style="color: #475569; line-height: 1.6; margin-bottom: 24px; font-size: 16px;">
+      Halo! Kami menerima permintaan untuk mengubah email akun Kancah Ate kamu. Klik tombol di bawah untuk mengkonfirmasi perubahan email.
+    </p>
+    
+    <!-- Email Change Info -->
+    <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px; border: 1px solid #e2e8f0;">
+      <p style="color: #64748b; margin: 0; font-size: 14px;">
+        <strong>Email baru:</strong><br>
+        <span style="color: #1e293b; font-size: 16px; font-weight: 600;">{{ .Email }}</span>
+      </p>
+    </div>
+    
+    <!-- CTA Button -->
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="{{ .ConfirmationURL }}" 
+         style="background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); 
+                color: #ffffff; 
+                padding: 16px 40px; 
+                text-decoration: none; 
+                border-radius: 12px; 
+                font-weight: 700;
+                font-size: 16px;
+                display: inline-block;
+                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+        Konfirmasi Perubahan Email
+      </a>
+    </div>
+    
+    <!-- Alternative Link -->
+    <p style="color: #94a3b8; font-size: 14px; margin-top: 24px; line-height: 1.6;">
+      Atau copy link ini ke browser kamu:<br>
+      <a href="{{ .ConfirmationURL }}" style="color: #8B5CF6; word-break: break-all; text-decoration: underline;">
+        {{ .ConfirmationURL }}
+      </a>
+    </p>
+  </div>
+  
+  <!-- Warning Box -->
+  <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
+    <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.6;">
+      <strong>⚠️ Perhatian:</strong> Jika kamu tidak meminta perubahan email, segera hubungi kami atau abaikan email ini. Email kamu tidak akan berubah tanpa konfirmasi.
+    </p>
+  </div>
+  
+  <!-- Info Box -->
+  <div style="background: #f1f5f9; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
+    <p style="color: #475569; margin: 0; font-size: 13px; line-height: 1.6;">
+      <strong>ℹ️ Yang Perlu Kamu Tahu:</strong><br>
+      • Setelah konfirmasi, email lama tidak bisa digunakan lagi<br>
+      • Kamu akan login menggunakan email baru<br>
+      • Semua data dan riwayat tetap aman
+    </p>
+  </div>
+  
+  <!-- Footer -->
+  <div style="text-align: center; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+    <p style="color: #94a3b8; font-size: 12px; margin: 0; line-height: 1.6;">
+      © 2026 Kancah Ate. All rights reserved.<br>
+      Email dikirim dari <strong>noreply@kancahate.my.id</strong>
+    </p>
+    <p style="color: #cbd5e1; font-size: 11px; margin-top: 12px;">
+      Kamu menerima email ini karena kamu memiliki akun di Kancah Ate.
+    </p>
+  </div>
+  
+</div>

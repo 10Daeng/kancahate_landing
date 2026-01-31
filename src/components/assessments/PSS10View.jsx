@@ -1,0 +1,207 @@
+// --- PSS-10 TEST COMPONENT ---
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, X, CheckCircle2, MessageCircle, LogIn, AlertCircle } from 'lucide-react';
+import { pssQuestions, pssChoices, calculatePSSScore } from '../../data/pss10_data';
+import { saveAssessmentResult, checkAuthStatus } from '../../services/assessmentService';
+import ShareableResult from './ShareableResult';
+
+/**
+ * PSS10View - Komponen tes stres PSS-10 (Perceived Stress Scale)
+ * @param {function} onBack - Callback untuk kembali ke halaman sebelumnya
+ * @param {function} onChat - Callback untuk memulai chat dengan hasil tes
+ */
+function PSS10View({ onBack, onChat }) {
+  const [answers, setAnswers] = useState({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [result, setResult] = useState(null);
+  const [completedAt, setCompletedAt] = useState(null);
+
+  // Login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  useEffect(() => {
+    checkAuthStatus().then(({ isLoggedIn }) => {
+      setIsLoggedIn(isLoggedIn);
+    });
+  }, []);
+
+  const totalQuestions = pssQuestions.length;
+  const currentQuestion = pssQuestions[currentIndex];
+
+  const handleAnswer = (qId, value) => {
+    const newAnswers = { ...answers, [qId]: value };
+    setAnswers(newAnswers);
+
+    setTimeout(() => {
+      if (currentIndex < totalQuestions - 1) {
+        setCurrentIndex(prev => prev + 1);
+      } else {
+        const res = calculatePSSScore(newAnswers);
+        setResult(res);
+        setCompletedAt(new Date().toISOString());
+        setShowResult(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // ENHANCEMENT: Save result (requires login)
+        saveAssessmentResult('pss10', res).then(saved => {
+          if (saved.success) {
+            console.log('PSS-10 result saved:', saved.data);
+            setSaveStatus('success');
+          } else if (saved.requiresLogin) {
+            setSaveStatus('requires_login');
+          } else {
+            setSaveStatus('error');
+          }
+        });
+      }
+    }, 250);
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) setCurrentIndex(prev => prev - 1);
+  };
+
+  if (showResult && result) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-12 animate-fade-in">
+        <button onClick={onBack} className="mb-6 flex items-center gap-2 text-slate-500 hover:text-orange-500 transition-colors">
+          <ArrowLeft size={18} /> Kembali ke Beranda
+        </button>
+        
+        <div className={`rounded-[2rem] p-8 md:p-12 border shadow-lg text-center ${result.color}`}>
+          <h2 className="text-4xl font-black mb-2">{result.category}</h2>
+          <div className="text-6xl font-bold mb-4 opacity-80">{result.totalScore}<span className="text-2xl font-normal">/40</span></div>
+          <p className="text-lg font-medium leading-relaxed mb-8">{result.description}</p>
+          
+          <div className="bg-white/50 p-6 rounded-2xl backdrop-blur-sm">
+             <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-3">Rekomendasi</h4>
+             <p className="text-slate-700">
+               {result.totalScore > 13 ? 
+                 "Hasil ini menunjukkan kamu sedang banyak pikiran. Jangan ragu untuk curhat ke Kai, ya. Kadang kita cuma butuh didengar." : 
+                 "Kondisi mentalmu cukup stabil. Terus jaga pola hidup sehat dan manajemen stres yang baik!"}
+             </p>
+          </div>
+        </div>
+
+        {/* Save Status Message */}
+        {saveStatus === 'requires_login' && (
+          <div className="mt-6 bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+            <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-800 mb-1">Login Diperlukan</p>
+              <p className="text-xs text-amber-700 mb-3">Silakan login untuk menyimpan hasil tes kamu secara permanen.</p>
+              <button
+                onClick={() => window.location.href = '/login'}
+                className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-600 transition-colors"
+              >
+                <LogIn size={16} />
+                Login Sekarang
+              </button>
+            </div>
+          </div>
+        )}
+
+        {saveStatus === 'success' && (
+          <div className="mt-6 bg-green-50 border-2 border-green-200 rounded-2xl p-4 flex items-center gap-3">
+            <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
+            <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan!</p>
+          </div>
+        )}
+
+        {/* Shareable Result Card */}
+        <div className="mt-8">
+          <ShareableResult
+            testType="PSS10"
+            result={{
+              score: result.totalScore,
+              description: result.description
+            }}
+            userName="Kamu"
+            completedAt={completedAt}
+          />
+        </div>
+
+        <div className="mt-8 flex justify-center gap-4 flex-wrap">
+           <button
+            onClick={onBack}
+            className="bg-white border-2 border-slate-200 text-slate-500 px-6 py-3 rounded-xl font-bold hover:border-orange-200 hover:text-orange-500 transition-colors"
+          >
+            Selesai
+          </button>
+           <button
+            onClick={() => onChat(result)}
+            className="bg-orange-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-200 flex items-center gap-2"
+          >
+            <MessageCircle size={18} />
+            Diskusikan Hasil dengan Kai
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-xl mx-auto px-6 py-12 min-h-[80vh] flex flex-col justify-center">
+      <div className="mb-10">
+        <div className="flex justify-between items-end mb-4">
+          <button onClick={onBack} className="text-slate-400 hover:text-orange-500"><X size={24}/></button>
+          <div className="text-xs font-bold text-slate-400 tracking-widest">
+            PERTANYAAN {currentIndex + 1} / {totalQuestions}
+          </div>
+        </div>
+        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+          <motion.div 
+            className="h-full bg-blue-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key={currentQuestion.id}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="flex-1"
+        >
+          <h2 className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed">
+            {currentQuestion.text}
+          </h2>
+
+          <div className="space-y-3">
+             {pssChoices.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleAnswer(currentQuestion.id, opt.value)}
+                  className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${
+                    answers[currentQuestion.id] === opt.value
+                      ? 'border-blue-500 bg-blue-50 text-blue-900 font-bold'
+                      : 'border-slate-100 hover:border-blue-200 hover:bg-slate-50 text-slate-600'
+                  }`}
+                >
+                  <span className="font-medium">{opt.text}</span>
+                  {answers[currentQuestion.id] === opt.value && <CheckCircle2 size={20} className="text-blue-500" />}
+                </button>
+              ))}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="mt-8 h-10 flex items-center">
+         {currentIndex > 0 && (
+           <button onClick={handlePrevious} className="text-slate-400 font-bold text-sm hover:text-slate-600 flex items-center gap-1">
+             <ArrowLeft size={16} /> Sebelumnya
+           </button>
+         )}
+      </div>
+    </div>
+  );
+}
+
+export default PSS10View;

@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-slate-800 font-sans antialiased;
+  }
+  
+  /* Smooth scroll for anchor links */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* ========================================
+   PREMIUM ANIMATIONS & TRANSITIONS
+======================================== */
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade In Up Animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade In Scale Animation */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Gentle Float Animation */
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Animation Classes */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s ease-out forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.5s ease-out forwards;
+}
+
+.animate-gentle-float {
+  animation: gentleFloat 4s ease-in-out infinite;
+}
+
+/* Staggered Animation Delays */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+
+/* Premium Hover Effect for Cards */
+.premium-card {
+  @apply transition-all duration-300 ease-out;
+}
+
+.premium-card:hover {
+  @apply -translate-y-1 shadow-xl;
+}
+
+/* Premium Button Hover */
+.premium-btn {
+  @apply transition-all duration-300 ease-out;
+}
+
+.premium-btn:hover {
+  @apply -translate-y-0.5 shadow-lg;
+}
+
+/* Scrolling Testimonials Animation */
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes scroll-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-scroll-left {
+  animation: scroll-left 30s linear infinite;
+}
+
+.animate-scroll-right {
+  animation: scroll-right 30s linear infinite;
+}
+
+.animate-scroll-left:hover,
+.animate-scroll-right:hover {
+  animation-play-state: paused;
+}
+
+/* ========================================
+   SPACIOUS WHITESPACE UTILITIES
+======================================== */
+.section-spacing {
+  @apply py-20 md:py-28 lg:py-32;
+}
+
+.section-spacing-sm {
+  @apply py-12 md:py-16 lg:py-20;
+}
+
+.content-spacing {
+  @apply space-y-6 md:space-y-8;
+}
+
+/* Premium Section Divider */
+.section-divider {
+  @apply border-t border-slate-100;
+}
+
