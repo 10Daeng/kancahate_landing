@@ -1,9 +1,9 @@
 // =============================================
--- API ROUTE: REGISTER (Pengganti Supabase Auth)
--- =============================================
+// API ROUTE: REGISTER (Pengganti Supabase Auth)
+// =============================================
 
 import { NextResponse } from 'next/server';
-import { registerUser } from '@/lib/dbClient';
+import { registerUser } from '@/lib/db';
 
 /**
  * POST /api/auth/register

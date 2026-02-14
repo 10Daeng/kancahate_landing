@@ -1,6 +1,6 @@
 // =============================================
--- API ROUTE: LOGOUT (Pengganti Supabase Auth)
--- =============================================
+// API ROUTE: LOGOUT (Pengganti Supabase Auth)
+// =============================================
 
 import { NextResponse } from 'next/server';
 

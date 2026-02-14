@@ -1,23 +1,29 @@
 // --- ASSESSMENT RESULT SERVICE ---
-// Handles saving and retrieving assessment results
+// Handles saving and retrieving assessment results using Neon.tech database
 
-import { supabase } from '../lib/supabaseClient';
+import { sql, getUserByToken } from '@/lib/db';
 
 /**
  * Check if user is logged in
- * @returns {Promise<{isLoggedIn: boolean, user?: any}>}
+ * @returns {Promise<{isLoggedIn: boolean, user?: any, error?: any}>}
  */
 export async function checkAuthStatus() {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check cookie for token
+    const token = getAuthToken();
 
-    if (authError) {
-      console.error('Auth error:', authError);
-      return { isLoggedIn: false, error: authError };
+    if (!token) {
+      return { isLoggedIn: false, requiresLogin: true };
+    }
+
+    const user = await getUserByToken(token);
+
+    if (!user) {
+      return { isLoggedIn: false, requiresLogin: true };
     }
 
     return {
-      isLoggedIn: !!user,
+      isLoggedIn: true,
       user
     };
   } catch (error) {
@@ -27,32 +33,35 @@ export async function checkAuthStatus() {
 }
 
 /**
+ * Get auth token from cookie
+ */
+function getAuthToken() {
+  // Server-side: read from cookies
+  if (typeof cookies === 'object') {
+    return cookies().get('auth_token')?.value;
+  }
+  // Client-side: read from document.cookie
+  if (typeof document !== 'undefined') {
+    const match = document.cookie.match(/(^|;)\\s*auth_token=([^;]+)/);
+    return match ? match[2] : null;
+  }
+  return null;
+}
+
+/**
  * Save assessment result to database (REQUIRES LOGIN)
- * Falls back to localStorage if database fails
- * @param {string} testType - Type of test ('bigfive', 'mbti', 'pss10', 'gad7')
+ * Falls back to localStorage if database fails or user not logged in
+ * @param {string} testType - Type of test ('RIASEC', 'MBTI', 'PSS10', 'GAD7', etc)
  * @param {object} result - Test result data
  * @returns {Promise<{success: boolean, data?: any, error?: string, requiresLogin?: boolean, savedLocally?: boolean}>}
  */
 export async function saveAssessmentResult(testType, result) {
   try {
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const token = getAuthToken();
 
-    if (authError) {
-      console.error('Auth error:', authError);
-      // Fallback to localStorage when auth fails
-      const localSave = saveAssessmentResultToLocal(testType, result, true);
-      return { 
-        ...localSave, 
-        requiresLogin: true,
-        savedLocally: true,
-        message: 'Hasil disimpan sementara di perangkat. Login untuk menyimpan ke akun.'
-      };
-    }
-
-    if (!user) {
-      // Login is required, but save to local first
-      console.log('No user logged in, saving to localStorage');
+    if (!token) {
+      // Not logged in, save to localStorage
+      console.log('No auth token, saving to localStorage');
       const localSave = saveAssessmentResultToLocal(testType, result, true);
       return {
         ...localSave,
@@ -62,48 +71,77 @@ export async function saveAssessmentResult(testType, result) {
       };
     }
 
-    // Prepare data based on test type
-    const assessmentData = {
-      user_id: user?.id || null,
-      test_type: testType,
-      test_date: new Date().toISOString(),
-      // Store different result formats
-      scores: result.scores || result.totalScore || null,
-      category: result.category || result.type || null,
-      description: result.description || null,
-      raw_result: result
-    };
+    const user = await getUserByToken(token);
 
-    // Try to save to database
-    const { data, error } = await supabase
-      .from('assessment_results')
-      .insert([assessmentData])
-      .select();
-
-    if (error) {
-      console.error('Database save error:', error);
-      // Fallback to localStorage on any database error
+    if (!user) {
+      // Invalid token, save to localStorage
       const localSave = saveAssessmentResultToLocal(testType, result, true);
-      return { 
-        ...localSave, 
+      return {
+        ...localSave,
+        requiresLogin: true,
         savedLocally: true,
-        dbError: error.message,
-        message: 'Gagal menyimpan ke server. Hasil disimpan sementara di perangkat.'
+        message: 'Sesi habis. Silakan login lagi untuk menyimpan permanen.'
       };
     }
 
-    return { success: true, data: data[0], savedLocally: false };
+    // Prepare data for database
+    const assessmentData = {
+      user_id: user.id,
+      email: user.email,
+      scores: result.scores || result.totalScore || null,
+      result: result,
+      test_type: testType,
+      completed_at: new Date().toISOString()
+    };
+
+    // Save to database
+    const dbResult = await saveAssessmentResultDB(user.id, testType, result, assessmentData);
+
+    return { success: true, data: dbResult, savedLocally: false };
+
   } catch (error) {
     console.error('Error saving assessment result:', error);
     // Always fallback to localStorage on error
     const localSave = saveAssessmentResultToLocal(testType, result, true);
-    return { 
-      ...localSave, 
+    return {
+      ...localSave,
       savedLocally: true,
       dbError: error.message,
       message: 'Terjadi kesalahan. Hasil disimpan sementara di perangkat.'
     };
   }
+}
+
+/**
+ * Save assessment result directly to database
+ */
+async function saveAssessmentResultDB(userId, testType, result, assessmentData) {
+  const tableMap = {
+    'RIASEC': 'riasec_results',
+    'MBTI': 'mbti_results',
+    'BigFive': 'bigfive_results',
+    'VARK': 'vark_results',
+    'LoveLanguages': 'love_language_results',
+    'MI': 'mi_results',
+    'RIMB': 'rimb_results',
+    'PSS10': 'pss10_results',
+    'GAD7': 'gad7_results',
+    'PHQ9': 'phq9_results',
+    'ROSENBERG': 'rosenberg_results'
+  };
+
+  const table = tableMap[testType];
+  if (!table) {
+    throw new Error(`Unknown test type: ${testType}`);
+  }
+
+  const dbResult = await sql`
+    INSERT INTO ${table} (user_id, email, scores, result, completed_at)
+    VALUES (${userId}, ${assessmentData.email}, ${JSON.stringify(assessmentData.scores)}, ${JSON.stringify(result)}, NOW())
+    RETURNING id, completed_at
+  `;
+
+  return dbResult[0];
 }
 
 /**
@@ -132,22 +170,28 @@ function saveAssessmentResultToLocal(testType, result, pendingSync = false) {
 }
 
 /**
- * Retry saving a locally stored result to the database
+ * Retry saving a locally stored result to database
  * @param {string} localId - ID of the local result to sync
  * @returns {Promise<{success: boolean, message?: string}>}
  */
 export async function retrySaveToDatabase(localId) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
+    const token = getAuthToken();
+
+    if (!token) {
       return { success: false, requiresLogin: true, message: 'Login diperlukan untuk menyimpan ke server' };
+    }
+
+    const user = await getUserByToken(token);
+
+    if (!user) {
+      return { success: false, requiresLogin: true, message: 'Sesi habis. Silakan login lagi.' };
     }
 
     // Get local results
     const localResults = JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
     const resultToSync = localResults.find(r => r.id === localId);
-    
+
     if (!resultToSync) {
       return { success: false, message: 'Data tidak ditemukan di perangkat' };
     }
@@ -155,30 +199,21 @@ export async function retrySaveToDatabase(localId) {
     // Prepare data for database
     const assessmentData = {
       user_id: user.id,
-      test_type: resultToSync.test_type,
-      test_date: resultToSync.test_date,
+      email: user.email,
       scores: resultToSync.result.scores || resultToSync.result.totalScore || null,
-      category: resultToSync.result.category || resultToSync.result.type || null,
-      description: resultToSync.result.description || null,
-      raw_result: resultToSync.result
+      result: resultToSync.result,
+      test_type: resultToSync.test_type,
+      completed_at: resultToSync.test_date || new Date().toISOString()
     };
 
     // Try to save to database
-    const { data, error } = await supabase
-      .from('assessment_results')
-      .insert([assessmentData])
-      .select();
-
-    if (error) {
-      console.error('Retry sync error:', error);
-      return { success: false, message: 'Gagal menyimpan ke server. Coba lagi nanti.' };
-    }
+    await saveAssessmentResultDB(user.id, resultToSync.test_type, resultToSync.result, assessmentData);
 
     // Remove from local storage on success
     const updatedResults = localResults.filter(r => r.id !== localId);
     localStorage.setItem('kancahate_assessment_results', JSON.stringify(updatedResults));
 
-    return { success: true, data: data[0], message: 'Berhasil disimpan ke server!' };
+    return { success: true, message: 'Berhasil disimpan ke server!' };
   } catch (error) {
     console.error('Error in retry sync:', error);
     return { success: false, message: 'Terjadi kesalahan. Coba lagi nanti.' };
@@ -192,15 +227,21 @@ export async function retrySaveToDatabase(localId) {
  */
 export async function syncPendingResults() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
+    const token = getAuthToken();
+
+    if (!token) {
+      return { synced: 0, failed: 0, requiresLogin: true };
+    }
+
+    const user = await getUserByToken(token);
+
     if (!user) {
       return { synced: 0, failed: 0, requiresLogin: true };
     }
 
     const localResults = JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
     const pendingResults = localResults.filter(r => r.pendingSync);
-    
+
     let synced = 0;
     let failed = 0;
 
@@ -239,31 +280,67 @@ export function getPendingSyncCount() {
  */
 export async function getAssessmentResults() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const token = getAuthToken();
 
-    if (!user) {
+    if (!token) {
       // Return local storage results for anonymous users
       const localResults = JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
       return localResults;
     }
 
-    const { data, error } = await supabase
-      .from('assessment_results')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('test_date', { ascending: false });
+    const user = await getUserByToken(token);
 
-    if (error) {
-      if (error.code === '42P01') {
-        return JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
-      }
-      throw error;
+    if (!user) {
+      // Return local storage results for invalid token
+      return JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
     }
 
-    return data || [];
+    // Get results from database
+    const tables = [
+      { name: 'riasec_results', type: 'RIASEC' },
+      { name: 'mbti_results', type: 'MBTI' },
+      { name: 'bigfive_results', type: 'BigFive' },
+      { name: 'vark_results', type: 'VARK' },
+      { name: 'love_language_results', type: 'LoveLanguages' },
+      { name: 'mi_results', type: 'MI' },
+      { name: 'rimb_results', type: 'RIMB' },
+      { name: 'pss10_results', type: 'PSS10' },
+      { name: 'gad7_results', type: 'GAD7' },
+      { name: 'phq9_results', type: 'PHQ9' },
+      { name: 'rosenberg_results', type: 'ROSENBERG' }
+    ];
+
+    const allResults = [];
+
+    for (const table of tables) {
+      try {
+        const result = await sql`
+          SELECT id, email, scores, result, completed_at, created_at,
+            ${table.type} as test_type
+          FROM ${sql.unsafe(table.name)}
+          WHERE user_id = ${user.id}
+          ORDER BY completed_at DESC
+        `;
+
+        if (result) {
+          allResults.push(...result);
+        }
+      } catch (e) {
+        console.error(`Error fetching from ${table.name}:`, e);
+      }
+    }
+
+    // Combine with local results
+    const localResults = JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
+
+    return [...allResults, ...localResults].sort((a, b) =>
+      new Date(b.completed_at || b.test_date) - new Date(a.completed_at || a.test_date)
+    );
+
   } catch (error) {
     console.error('Error fetching assessment results:', error);
-    return [];
+    // Return local results on error
+    return JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
   }
 }
 
@@ -282,9 +359,9 @@ export async function getResultsByType(testType) {
  */
 export async function deleteAssessmentResult(resultId) {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const token = getAuthToken();
 
-    if (!user && resultId.startsWith('local_')) {
+    if (!token && resultId.startsWith('local_')) {
       // Delete from localStorage
       const existing = JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
       const filtered = existing.filter(r => r.id !== resultId);
@@ -292,265 +369,50 @@ export async function deleteAssessmentResult(resultId) {
       return { success: true };
     }
 
-    const { error } = await supabase
-      .from('assessment_results')
-      .delete()
-      .eq('id', resultId)
-      .eq('user_id', user.id);
+    if (!token) {
+      return { success: false, error: 'Login diperlukan' };
+    }
 
-    if (error) throw error;
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error deleting result:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Export all user data (GDPR compliance)
- * @returns {Promise<{success: boolean, data?: any, error?: string}>}
- */
-export async function exportUserData() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getUserByToken(token);
 
     if (!user) {
-      // Export localStorage data for anonymous users
-      const localAssessments = JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
-      return {
-        success: true,
-        data: {
-          user: null,
-          assessments: localAssessments,
-          export_date: new Date().toISOString()
-        }
-      };
+      return { success: false, error: 'Sesi habis' };
     }
 
-    // Get assessment results from database
-    const { data: assessments, error } = await supabase
-      .from('assessment_results')
-      .select('*')
-      .eq('user_id', user.id);
+    // Delete from database
+    const tables = ['riasec_results', 'mbti_results', 'bigfive_results', 'vark_results',
+      'love_language_results', 'mi_results', 'rimb_results', 'pss10_results',
+      'gad7_results', 'phq9_results', 'rosenberg_results'];
 
-    if (error && error.code !== '42P01') throw error;
-
-    return {
-      success: true,
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at
-        },
-        assessments: assessments || [],
-        export_date: new Date().toISOString()
-      }
-    };
-  } catch (error) {
-    console.error('Error exporting data:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Request account deletion (GDPR compliance)
- * @returns {Promise<{success: boolean, message?: string}>}
- */
-export async function requestAccountDeletion() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { success: false, message: 'No user logged in' };
-    }
-
-    // Log deletion request (actual deletion should be done by admin/service role)
-    const { error } = await supabase
-      .from('deletion_requests')
-      .insert([{
-        user_id: user.id,
-        email: user.email,
-        requested_at: new Date().toISOString(),
-        status: 'pending'
-      }]);
-
-    // If table doesn't exist, that's okay - just log it
-    if (error && error.code !== '42P01') {
-      console.warn('Could not log deletion request:', error);
-    }
-
-    return {
-      success: true,
-      message: 'Permintaan penghapusan akun telah dicatat. Tim kami akan menghubungi Anda dalam 7 hari kerja.'
-    };
-  } catch (error) {
-    console.error('Error requesting deletion:', error);
-    return { success: false, message: 'Gagal memproses permintaan' };
-  }
-}
-
-/**
- * Get user profile from database
- * @returns {Promise<{success: boolean, profile?: object, error?: string}>}
- */
-export async function getUserProfile() {
-  try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    // Try to get from cache first
-    const cacheKey = `user_profile_${user.id}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
+    let deleted = false;
+    for (const table of tables) {
       try {
-        const profile = JSON.parse(cached);
-        // Check if cache is less than 5 minutes old
-        if (profile._cached_at && Date.now() - profile._cached_at < 5 * 60 * 1000) {
-          console.log('[Profile] Loaded from cache');
-          return { success: true, profile };
+        const result = await sql`
+          DELETE FROM ${sql.unsafe(table)}
+          WHERE id = ${resultId}
+          AND user_id = ${user.id}
+        `;
+        if (result) {
+          deleted = true;
+          break;
         }
       } catch (e) {
-        // Invalid cache, continue to fetch
+        // Ignore error, try next table
       }
     }
 
-    // Fetch from database
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No profile found
-        return { success: true, profile: null };
-      }
-      console.error('Error fetching profile:', error);
-      return { success: false, error: error.message };
+    if (deleted) {
+      return { success: true };
+    } else {
+      // Might be local result
+      const existing = JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
+      const filtered = existing.filter(r => r.id !== resultId);
+      localStorage.setItem('kancahate_assessment_results', JSON.stringify(filtered));
+      return { success: true };
     }
 
-    // Cache the result
-    const profileWithCache = { ...data, _cached_at: Date.now() };
-    localStorage.setItem(cacheKey, JSON.stringify(profileWithCache));
-
-    return { success: true, profile: data };
   } catch (error) {
-    console.error('Error getting user profile:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Create user profile
- * @param {object} profileData - Profile data (name, gender, dob, etc.)
- * @returns {Promise<{success: boolean, profile?: object, error?: string}>}
- */
-export async function createUserProfile(profileData) {
-  try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    // Calculate age from DOB
-    let age = null;
-    if (profileData.dob) {
-      const today = new Date();
-      const birthDate = new Date(profileData.dob);
-      age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-    }
-
-    const profile = {
-      user_id: user.id,
-      email: user.email,
-      name: profileData.name,
-      gender: profileData.gender,
-      dob: profileData.dob,
-      age: age,
-      education_status: profileData.education_status,
-      institution_type: profileData.institution_type,
-      occupation: profileData.occupation,
-      location: profileData.location,
-      location_custom: profileData.location_custom
-    };
-
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .insert([profile])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating profile:', error);
-      return { success: false, error: error.message };
-    }
-
-    // Clear cache
-    localStorage.removeItem(`user_profile_${user.id}`);
-
-    console.log('[Profile] Created successfully');
-    return { success: true, profile: data };
-  } catch (error) {
-    console.error('Error creating user profile:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Update user profile
- * @param {object} profileData - Profile data to update
- * @returns {Promise<{success: boolean, profile?: object, error?: string}>}
- */
-export async function updateUserProfile(profileData) {
-  try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    // Calculate age from DOB if provided
-    if (profileData.dob) {
-      const today = new Date();
-      const birthDate = new Date(profileData.dob);
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      profileData.age = age;
-    }
-
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .update(profileData)
-      .eq('user_id', user.id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating profile:', error);
-      return { success: false, error: error.message };
-    }
-
-    // Clear cache
-    localStorage.removeItem(`user_profile_${user.id}`);
-
-    console.log('[Profile] Updated successfully');
-    return { success: true, profile: data };
-  } catch (error) {
-    console.error('Error updating user profile:', error);
+    console.error('Error deleting result:', error);
     return { success: false, error: error.message };
   }
 }
@@ -561,9 +423,7 @@ export default {
   getAssessmentResults,
   getResultsByType,
   deleteAssessmentResult,
-  exportUserData,
-  requestAccountDeletion,
-  getUserProfile,
-  createUserProfile,
-  updateUserProfile
+  retrySaveToDatabase,
+  syncPendingResults,
+  getPendingSyncCount
 };

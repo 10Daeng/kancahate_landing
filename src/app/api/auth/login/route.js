@@ -1,9 +1,9 @@
 // =============================================
--- API ROUTES: AUTH (Pengganti Supabase Auth)
--- =============================================
+// API ROUTES: AUTH (Pengganti Supabase Auth)
+// =============================================
 
 import { NextResponse } from 'next/server';
-import { loginUser, registerUser, getUserByToken } from '@/lib/dbClient';
+import { loginUser, getUserByToken } from '@/lib/db';
 
 /**
  * POST /api/auth/login
