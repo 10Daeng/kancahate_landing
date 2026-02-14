@@ -1,18 +1,18 @@
 // --- SHAREABLE RESULT COMPONENT ---
-// Gen Z-friendly: Share assessment results to Instagram Story
+// Gen Z-friendly: Share assessment results to social media
 // Visual: Estetik, card-based, ready to screenshot
 
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Share2, Instagram, Copy, Check } from 'lucide-react';
+import { Download, Share2, Mail, Copy, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 /**
  * ShareableResult - Card hasil tes yang estetik untuk di-share
- * Bisa di-screenshot langsung untuk Instagram Story
+ * Bisa di-screenshot langsung untuk upload ke sosial media
  *
  * Props:
- * - testType: 'GAD7' | 'PSS10' | 'MBTI' | 'BigFive'
+ * - testType: 'GAD7' | 'PSS10' | 'MBTI' | 'BigFive' | 'RIASEC' | 'PHQ9' | 'ROSENBERG' | 'VARK' | 'MI' | 'LoveLanguages'
  * - result: Object dengan data hasil tes
  * - userName: Nama user (opsional)
  * - completedAt: Timestamp waktu selesai tes (opsional, default: now)
@@ -24,9 +24,27 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
   const cardRef = useRef(null);
 
   // Gunakan waktu selesai tes atau waktu sekarang
-  const completionTime = completedAt ? new Date(completedAt) : new Date();
+  // Pastikan completionTime selalu Date object yang valid
+  const completionTime = (completedAt && completedAt !== null) ? new Date(completedAt) : new Date();
 
-  // Konfigurasi untuk setiap tipe tes - dengan design yang lebih menarik
+  // Format tanggal dan waktu WIB
+  const formatDateWIB = (date) => {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '-';
+    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('id-ID', options);
+  };
+
+  const formatTimeWIB = (date) => {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '--:--';
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes} WIB`;
+  };
+
+  const currentDate = formatDateWIB(completionTime);
+  const currentTime = formatTimeWIB(completionTime);
+
+  // Konfigurasi untuk setiap tipe tes
   const getTestConfig = (testType) => {
     const configs = {
       GAD7: {
@@ -160,7 +178,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
     }
   };
 
-  const getScoreDisplay = (testType, result, labelInfo) => {
+  const getScoreDisplay = (testType, result) => {
     if (result.score === undefined) return null;
     const maxScores = { GAD7: 21, PSS10: 40, PHQ9: 27, ROSENBERG: 40 };
     const maxScore = maxScores[testType] || '-';
@@ -173,22 +191,9 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
     return labelInfo.desc;
   };
 
-  // Format tanggal dan waktu WIB
-  const formatDateWIB = (date) => {
-    const options = { day: 'numeric', month: 'short', year: 'numeric' };
-    return date.toLocaleDateString('id-ID', options);
-  };
-  const formatTimeWIB = (date) => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes} WIB`;
-  };
-  const currentDate = formatDateWIB(completionTime);
-  const currentTime = formatTimeWIB(completionTime);
-
   const config = getTestConfig(testType);
   const labelInfo = getLabelInfo(testType, result);
-  const scoreDisplay = getScoreDisplay(testType, result, labelInfo);
+  const scoreDisplay = getScoreDisplay(testType, result);
   const description = getDescription(testType, result, labelInfo);
 
   // Copy link ke clipboard
@@ -199,10 +204,11 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Share ke Instagram (buka app)
-  const handleShareInstagram = () => {
-    const instagramUrl = 'https://www.instagram.com/';
-    window.open(instagramUrl, '_blank');
+  // Share ke email
+  const handleShareEmail = () => {
+    const subject = `Hasil Tes ${config.title} - ${labelInfo.label}`;
+    const body = `Aku baru saja tes ${config.title} di Kancah Ate!\n\nHasilku: ${labelInfo.label}\n${scoreDisplay ? `Skor: ${scoreDisplay}\n` : ''}${description}\n\nCoba tesnya di: ${window.location.href}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   // Download sebagai gambar
@@ -231,7 +237,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      console.error("Download fail:", err);
+      console.error("Download failed:", err);
       alert('Gagal mendownload gambar. Silakan screenshot manual.');
     } finally {
       setIsDownloading(false);
@@ -308,7 +314,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
 
             {/* Result Info */}
             <div style={{ flex: 1 }}>
-              {/* Label dengan sejajar */}
+              {/* Label */}
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
                 <span style={{ fontSize: '12px', color: `${labelInfo.color}99`, fontWeight: 500 }}>
                   Hasil tes
@@ -328,7 +334,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
                 {labelInfo.label}
               </div>
 
-              {/* Score Display - sejajar dengan label */}
+              {/* Score Display */}
               {scoreDisplay && (
                 <div
                   style={{
@@ -427,11 +433,11 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={handleShareInstagram}
+              onClick={handleShareEmail}
               className="flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl hover:from-purple-100 hover:to-pink-100 transition-all"
             >
-              <Instagram size={24} className="text-pink-500" />
-              <span className="text-xs font-bold text-slate-700">Instagram Story</span>
+              <Mail size={24} className="text-pink-500" />
+              <span className="text-xs font-bold text-slate-700">Email</span>
             </button>
             <button
               onClick={() => {
@@ -450,7 +456,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
             </button>
           </div>
           <p className="text-xs text-slate-400 text-center mt-4">
-            💡 Screenshot kartu hasil di atas untuk upload ke Instagram Story!
+            Screenshot kartu hasil di atas untuk upload ke sosmed!
           </p>
         </motion.div>
       )}
