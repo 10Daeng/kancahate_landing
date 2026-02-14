@@ -4,12 +4,23 @@
 import { sql, getUserByToken } from '@/lib/db';
 
 /**
+ * Check auth token from cookie
+ */
+function getAuthToken() {
+  // Client-side: read from localStorage (disimpan setelah login)
+  if (typeof localStorage !== 'undefined') {
+    const token = localStorage.getItem('auth_token');
+    return token;
+  }
+  return null;
+}
+
+/**
  * Check if user is logged in
  * @returns {Promise<{isLoggedIn: boolean, user?: any, error?: any}>}
  */
 export async function checkAuthStatus() {
   try {
-    // Check cookie for token
     const token = getAuthToken();
 
     if (!token) {
@@ -30,22 +41,6 @@ export async function checkAuthStatus() {
     console.error('Error checking auth status:', error);
     return { isLoggedIn: false, error };
   }
-}
-
-/**
- * Get auth token from cookie
- */
-function getAuthToken() {
-  // Server-side: read from cookies
-  if (typeof cookies === 'object') {
-    return cookies().get('auth_token')?.value;
-  }
-  // Client-side: read from document.cookie
-  if (typeof document !== 'undefined') {
-    const match = document.cookie.match(/(^|;)\\s*auth_token=([^;]+)/);
-    return match ? match[2] : null;
-  }
-  return null;
 }
 
 /**
@@ -89,7 +84,6 @@ export async function saveAssessmentResult(testType, result) {
       user_id: user.id,
       email: user.email,
       scores: result.scores || result.totalScore || null,
-      result: result,
       test_type: testType,
       completed_at: new Date().toISOString()
     };
@@ -136,7 +130,7 @@ async function saveAssessmentResultDB(userId, testType, result, assessmentData) 
   }
 
   const dbResult = await sql`
-    INSERT INTO ${table} (user_id, email, scores, result, completed_at)
+    INSERT INTO ${sql.safe(table)} (user_id, email, scores, result, completed_at)
     VALUES (${userId}, ${assessmentData.email}, ${JSON.stringify(assessmentData.scores)}, ${JSON.stringify(result)}, NOW())
     RETURNING id, completed_at
   `;
@@ -171,7 +165,7 @@ function saveAssessmentResultToLocal(testType, result, pendingSync = false) {
 
 /**
  * Retry saving a locally stored result to database
- * @param {string} localId - ID of the local result to sync
+ * @param {string} localId - ID of local result to sync
  * @returns {Promise<{success: boolean, message?: string}>}
  */
 export async function retrySaveToDatabase(localId) {
@@ -201,7 +195,6 @@ export async function retrySaveToDatabase(localId) {
       user_id: user.id,
       email: user.email,
       scores: resultToSync.result.scores || resultToSync.result.totalScore || null,
-      result: resultToSync.result,
       test_type: resultToSync.test_type,
       completed_at: resultToSync.test_date || new Date().toISOString()
     };
@@ -316,8 +309,8 @@ export async function getAssessmentResults() {
       try {
         const result = await sql`
           SELECT id, email, scores, result, completed_at, created_at,
-            ${table.type} as test_type
-          FROM ${sql.unsafe(table.name)}
+            '${table.type}' as test_type
+          FROM ${sql.safe(table.name)}
           WHERE user_id = ${user.id}
           ORDER BY completed_at DESC
         `;
@@ -326,6 +319,7 @@ export async function getAssessmentResults() {
           allResults.push(...result);
         }
       } catch (e) {
+        // Table might not exist, ignore
         console.error(`Error fetching from ${table.name}:`, e);
       }
     }
@@ -388,8 +382,8 @@ export async function deleteAssessmentResult(resultId) {
     for (const table of tables) {
       try {
         const result = await sql`
-          DELETE FROM ${sql.unsafe(table)}
-          WHERE id = ${resultId}
+          DELETE FROM ${sql.safe(table)}
+          WHERE id = ${sql.safe(resultId)}
           AND user_id = ${user.id}
         `;
         if (result) {
