@@ -283,7 +283,7 @@ export default function App() {
                 <AlertCircle size={24} />
               </div>
               <div>
-                <h4 className="font-bold text-slate-800 text-lg">Bantuan Krisis</h4>
+                <h4 className="font-bold text-slate-800 text-lg whitespace-nowrap">Bantuan Krisis</h4>
                 <p className="text-sm text-slate-500">Hotline 119 ext 8</p>
               </div>
             </a>
