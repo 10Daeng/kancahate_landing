@@ -13,7 +13,8 @@ import {
   Heart,
   Phone,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Shield
 } from 'lucide-react';
 
 import { useSearchParams } from 'next/navigation'; // Add useSearchParams
@@ -286,6 +287,16 @@ export default function App() {
                 <p className="text-sm text-slate-500">Hotline 119 ext 8</p>
               </div>
             </a>
+
+            <a href="/laporan-kejadian" className="premium-card bg-gradient-to-br from-rose-50 to-orange-50 border-2 border-rose-200 rounded-2xl p-6 flex items-center gap-5 hover:border-rose-300 hover:shadow-lg hover:shadow-rose-100 transition-all">
+              <div className="w-14 h-14 bg-gradient-to-br from-rose-500 to-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg">
+                <Shield size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800 text-lg">Lapor Kekerasan / Bullying</h4>
+                <p className="text-sm text-slate-500">Melapor itu berani. Identitasmu aman.</p>
+              </div>
+            </a>
           </div>
         </div>
       </section>
@@ -351,6 +362,15 @@ export default function App() {
 
       {/* ========== FOOTER ========== */}
       <Footer />
+
+      {/* ========== FLOATING REPORT BUTTON ========== */}
+      <a
+        href="/laporan-kejadian"
+        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white rounded-full shadow-xl shadow-rose-200 hover:shadow-rose-300 transition-all hover:scale-105 group"
+      >
+        <Shield size={20} className="group-hover:animate-pulse" />
+        <span className="font-bold text-sm hidden sm:inline">Lapor!</span>
+      </a>
 
       {/* ========== CHAT MODAL ========== */}
       <ChatModal 

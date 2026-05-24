@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Shield } from 'lucide-react';
 
 export default function Header({ actionButtonHandler }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,7 +35,7 @@ export default function Header({ actionButtonHandler }) {
           <h1 className="text-xl font-bold text-slate-800">Kancah Ate</h1>
         </Link>
         
-        {/* Desktop Nav */}
+{/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
           <Link href="/" className="text-sm font-medium hover:text-violet-500 transition-colors">Beranda</Link>
           <Link href="/psikotes" className="text-sm font-medium hover:text-violet-500 transition-colors">Tes Seru</Link>
@@ -45,6 +45,10 @@ export default function Header({ actionButtonHandler }) {
 
         {/* CTA & Auth & Mobile Menu */}
         <div className="flex items-center gap-3">
+          <Link href="/laporan-kejadian" className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-full font-bold text-xs transition-all hover:shadow-sm hover:shadow-rose-100">
+            <Shield size={14} />
+            Lapor!
+          </Link>
           {user ? (
              <Link href={user.email?.includes('lenterabatin') ? "/kancah-private-auth" : "/dashboard"} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-bold text-xs transition-colors">
                 <div className="w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center text-white text-[10px]">
@@ -100,12 +104,15 @@ export default function Header({ actionButtonHandler }) {
              </Link>
           )}
 
-          <div className="space-y-1">
-             <Link href="/" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg">Beranda</Link>
-             <Link href="/psikotes" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg">Tes Seru</Link>
-             <Link href="/ruang-baca" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg">Ruang Baca</Link>
-             <Link href="/#crisis" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg text-red-500">Bantuan Darurat</Link>
-          </div>
+<div className="space-y-1">
+              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg">Beranda</Link>
+              <Link href="/psikotes" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg">Tes Seru</Link>
+              <Link href="/ruang-baca" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg">Ruang Baca</Link>
+              <Link href="/laporan-kejadian" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-bold text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2">
+                <Shield size={16} /> Lapor Kekerasan / Bullying
+              </Link>
+              <Link href="/#crisis" onClick={() => setMobileMenuOpen(false)} className="block py-3 px-2 font-medium hover:bg-slate-50 rounded-lg text-red-500">Bantuan Darurat</Link>
+           </div>
         </div>
       )}
     </header>

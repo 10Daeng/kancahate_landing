@@ -131,9 +131,34 @@ export default function UserDashboard() {
                  <Award size={100} />
               </div>
            </div>
-        </div>
+</div>
 
-        {/* Recent Chat Sessions */}
+         {/* Report Incident Banner */}
+         <div className="mb-12 animate-fade-in-up" style={{animationDelay: '0.15s'}}>
+           <Link href="/laporan-kejadian" className="block rounded-2xl overflow-hidden group">
+             <div className="bg-gradient-to-r from-rose-500 to-orange-500 p-6 md:p-8 text-white relative">
+               <div className="absolute -bottom-4 -right-4 text-white/10">
+                 <Shield size={120} />
+               </div>
+               <div className="relative z-10">
+                 <div className="flex items-center gap-3 mb-3">
+                   <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                     <Shield size={24} />
+                   </div>
+                   <div>
+                     <h3 className="font-bold text-xl">Lapor Kekerasan & Bullying</h3>
+                     <p className="text-white/80 text-sm">Melapor itu berani. Identitasmu dijaga kerahasiaannya.</p>
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-2 text-sm font-bold mt-4 bg-white/20 w-fit px-4 py-2 rounded-lg backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                   Buat Laporan <ChevronRight size={16} />
+                 </div>
+               </div>
+             </div>
+           </Link>
+         </div>
+
+         {/* Recent Chat Sessions */}
         <div className="mb-12 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
