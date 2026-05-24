@@ -55,12 +55,24 @@ const EVIDENCE_TYPES = [
 
 const VALUES_OPTIONS = [
   {
-    group: 'Budaya Sekolah Aman & Nyaman',
+    group: 'Nilai Budaya Sekolah Aman & Nyaman (BSAN)',
+    subtitle: 'Permendikdasmen No. 6 Tahun 2026',
     items: [
-      { id: 'aman', label: 'Merasa Aman', description: 'Setiap orang berhak merasa aman di lingkungan sekolah' },
-      { id: 'nyaman', label: 'Merasa Nyaman', description: 'Lingkungan yang mendukung tanpa ancaman' },
-      { id: 'saling_melindungi', label: 'Saling Melindungi', description: 'Peduli dan melindungi satu sama lain' },
-      { id: 'tanpa_diskriminasi', label: 'Tanpa Diskriminasi', description: 'Tidak membeda-bedakan teman' },
+      { id: 'bsan_spiritual', label: 'Pemenuhan Kebutuhan Spiritual', description: 'Menjaga kebutuhan spiritual dan batiniah setiap warga sekolah' },
+      { id: 'bsan_fisik', label: 'Pelindungan Fisik', description: 'Menjamin keamanan fisik dari kekerasan, kecelakaan, dan bahaya' },
+      { id: 'bsan_psikologis', label: 'Kesejahteraan Psikologis & Keamanan Sosiokultural', description: 'Lingkungan yang mendukung kesehatan mental dan keberagaman budaya' },
+      { id: 'bsan_digital', label: 'Keadaban & Keamanan Digital', description: 'Mengamankan ruang digital dari ujaran kebencian dan cyberbullying' },
+    ],
+  },
+  {
+    group: 'Nilai Budaya Kerja SOBAT (Kemendikdasmen)',
+    subtitle: 'Budaya kerja Kementerian Pendidikan',
+    items: [
+      { id: 'sobat_solid', label: 'Solid', description: 'Bekerja sama secara solid dan kompak' },
+      { id: 'sobat_optimis', label: 'Optimis', description: 'Berpandangan positif dan penuh harapan' },
+      { id: 'sobat_berorientasi_pelayanan', label: 'Berorientasi Pelayanan', description: 'Mengutamakan pelayanan yang prima' },
+      { id: 'sobat_akuntabel', label: 'Akuntabel', description: 'Bertanggung jawab dan transparency' },
+      { id: 'sobat_tangguh', label: 'Tangguh', description: 'Kuat dan tidak mudah menyerah' },
     ],
   },
   {
@@ -73,16 +85,6 @@ const VALUES_OPTIONS = [
       { id: 'habit_menghormati', label: 'Menghormati', description: 'Menghormati orang lain terlepas dari perbedaan' },
       { id: 'habit_bertanggung_jawab', label: 'Bertanggung Jawab', description: 'Bertanggung jawab atas tindakan sendiri' },
       { id: 'habit_bekerja_sama', label: 'Bekerja Sama', description: 'Bermitra dan bekerja bersama, bukan saling menjatuhkan' },
-    ],
-  },
-  {
-    group: 'Nilai SOBAT',
-    items: [
-      { id: 'sobat_setia_kawan', label: 'Setia Kawan', description: 'Menjadi teman setia yang selalu ada' },
-      { id: 'sobat_organisasi', label: 'Organisasi Rapi', description: 'Tertib dan teratur dalam bertindak' },
-      { id: 'sobat_bangga_berprestasi', label: 'Bangga Berprestasi', description: 'Membanggakan diri dan sekolah dengan cara positif' },
-      { id: 'sobat_aktif_dan_cerdas', label: 'Aktif & Cerdas', description: 'Aktif berpartisipasi dan berpikir cerdas' },
-      { id: 'sobat_tangguh', label: 'Tangguh', description: 'Kuat dan tidak mudah menyerah' },
     ],
   },
 ];
@@ -300,12 +302,21 @@ export default function LaporanKejadianPage() {
 
         {/* Values Banner */}
         <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl p-6 mb-8 text-white animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <h3 className="font-bold text-lg mb-3 flex items-center gap-2"><BookOpen size={20} /> Nilai-Nilai yang Kita Junjung</h3>
+<h3 className="font-bold text-lg mb-3 flex items-center gap-2"><BookOpen size={20} /> Nilai-Nilai yang Dilanggar</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <p className="font-bold text-sm mb-1">Budaya Sekolah Aman & Nyaman</p>
-              <p className="text-white/80 text-xs">Setiap orang berhak merasa aman</p>
+              <p className="font-bold text-sm mb-1">BSAN <span className="font-normal opacity-70">(Permendikdasmen No. 6/2026)</span></p>
+              <p className="text-white/80 text-xs">Pemenuhan spiritual, pelindungan fisik, kesejahteraan psikologis, keadaban digital</p>
             </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <p className="font-bold text-sm mb-1">Nilai SOBAT <span className="font-normal opacity-70">(Kemendikdasmen)</span></p>
+              <p className="text-white/80 text-xs">Solid, Optimis, Berorientasi Pelayanan, Akuntabel, Tangguh</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+              <p className="font-bold text-sm mb-1">7 Kebiasaan Baik Anak Indonesia</p>
+              <p className="text-white/80 text-xs">Jujur, adil, toleran, peduli, menghormati, bertanggung jawab, bekerja sama</p>
+            </div>
+          </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
               <p className="font-bold text-sm mb-1">7 Kebiasaan Baik Anak Indonesia</p>
               <p className="text-white/80 text-xs">Jujur, adil, toleran, peduli, menghormati, bertanggung jawab, bekerja sama</p>
@@ -694,11 +705,15 @@ export default function LaporanKejadianPage() {
 
               {/* Values */}
               <div className="space-y-6 mb-8">
-                {VALUES_OPTIONS.map((group) => (
+{VALUES_OPTIONS.map((group) => (
                   <div key={group.group}>
                     <h4 className="font-bold text-slate-700 text-sm mb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-violet-500" />{group.group}
+                      <div className="w-2 h-2 rounded-full bg-violet-500" />
+                      {group.group}
                     </h4>
+                    {group.subtitle && (
+                      <p className="text-xs text-slate-400 mb-3 ml-4">{group.subtitle}</p>
+                    )}
                     <div className="grid gap-2">
                       {group.items.map((item) => {
                         const isSelected = form.valuesViolated.includes(item.id);
