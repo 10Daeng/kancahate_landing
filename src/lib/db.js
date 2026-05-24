@@ -6,22 +6,26 @@
 import { neon } from '@neondatabase/serverless';
 
 // Database connection string (server-side only!)
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL || process.env.NEXT_PUBLIC_NEON_DATABASE_URL;
 
-if (!databaseUrl) {
-  console.error('DATABASE_URL is not set!');
-}
-
-// Neon serverless driver
-export const sql = neon(databaseUrl, {
-  fetch: (url, options) => {
-    // Add timeout dan retry logic
-    return fetch(url, {
-      ...options,
-      signal: AbortSignal.timeout(30000), // 30 second timeout
+// Neon serverless driver - lazy initialization to be safe on client-side
+let _sql = null;
+export const sql = (...args) => {
+  if (!_sql) {
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is not set. Database operations are only available on the server-side.');
+    }
+    _sql = neon(databaseUrl, {
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          signal: AbortSignal.timeout(30000),
+        });
+      }
     });
   }
-});
+  return _sql(...args);
+};
 
 // =============================================
 // UTILITY FUNCTIONS untuk mengganti Supabase Auth
@@ -200,6 +204,73 @@ export async function saveChatSession(userId, email, category, riskLevel, summar
   return result[0];
 }
 
+export async function saveIncidentReport(data) {
+  const {
+    reporterId, reporterName, reporterStatus, reporterPhone, reporterEmail,
+    isAnonymous, perpName, perpClass, perpDescription,
+    victimName, victimClass, victimRelation,
+    incidentType, bullyingTypes, location, incidentDate, incidentTime,
+    chronology, witnesses, evidence, initialActions, reportedToCounselor,
+    valuesViolated, severity,
+  } = data;
+
+  const result = await sql`
+    INSERT INTO incident_reports (
+      reporter_id, reporter_name, reporter_status, reporter_phone, reporter_email,
+      is_anonymous, perp_name, perp_class, perp_description,
+      victim_name, victim_class, victim_relation,
+      incident_type, bullying_types, location, incident_date, incident_time,
+      chronology, witnesses, evidence, initial_actions, reported_to_counselor,
+      values_violated, severity
+    ) VALUES (
+      ${reporterId}, ${reporterName || null}, ${reporterStatus || null}, ${reporterPhone || null}, ${reporterEmail || null},
+      ${isAnonymous || false}, ${perpName || null}, ${perpClass || null}, ${perpDescription || null},
+      ${victimName || null}, ${victimClass || null}, ${victimRelation || null},
+      ${incidentType}, ${JSON.stringify(bullyingTypes || [])}, ${location || null}, ${incidentDate || null}, ${incidentTime || null},
+      ${chronology || null}, ${JSON.stringify(witnesses || [])}, ${JSON.stringify(evidence || [])}, ${initialActions || null}, ${reportedToCounselor || false},
+      ${JSON.stringify(valuesViolated || [])}, ${severity || 'sedang'}
+    )
+    RETURNING id, created_at
+  `;
+
+  return result[0];
+}
+
+export async function getIncidentReports({ status, limit = 50, offset = 0 } = {}) {
+  let query;
+  if (status) {
+    query = sql`
+      SELECT ir.*, u.name as reporter_name, u.email as reporter_email
+      FROM incident_reports ir
+      LEFT JOIN users u ON ir.reporter_id = u.id
+      WHERE ir.status = ${status}
+      ORDER BY ir.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+  } else {
+    query = sql`
+      SELECT ir.*, u.name as reporter_name, u.email as reporter_email
+      FROM incident_reports ir
+      LEFT JOIN users u ON ir.reporter_id = u.id
+      ORDER BY ir.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+  }
+
+  return query;
+}
+
+export async function updateIncidentReportStatus(reportId, status, adminNotes) {
+  const result = await sql`
+    UPDATE incident_reports
+    SET status = ${status}, admin_notes = ${adminNotes || null}, updated_at = NOW()
+    WHERE id = ${reportId}
+    RETURNING id, status, updated_at
+  `;
+
+  return result[0];
+}
+
 // Default export
 export default {
   sql,
@@ -209,5 +280,8 @@ export default {
   getUserAssessments,
   saveAssessmentResult,
   getUserChatSessions,
-  saveChatSession
+  saveChatSession,
+  saveIncidentReport,
+  getIncidentReports,
+  updateIncidentReportStatus
 };
