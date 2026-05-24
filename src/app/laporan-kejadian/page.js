@@ -120,13 +120,8 @@ export default function LaporanKejadianPage() {
     reporterEmail: '',
     isAnonymous: false,
 
-    perpName: '',
-    perpClass: '',
-    perpDescription: '',
-
-    victimName: '',
-    victimClass: '',
-    victimRelation: '',
+    perpetrators: [{ name: '', kelas: '', description: '' }],
+    victims: [{ name: '', kelas: '', relation: '' }],
 
     incidentType: '',
     bullyingTypes: [],
@@ -180,6 +175,38 @@ export default function LaporanKejadianPage() {
   const removeWitness = (index) => {
     if (form.witnesses.length > 1) {
       updateForm('witnesses', form.witnesses.filter((_, i) => i !== index));
+    }
+  };
+
+  const handlePerpChange = (index, field, value) => {
+    const updated = [...form.perpetrators];
+    updated[index] = { ...updated[index], [field]: value };
+    updateForm('perpetrators', updated);
+  };
+
+  const addPerpetrator = () => {
+    updateForm('perpetrators', [...form.perpetrators, { name: '', kelas: '', description: '' }]);
+  };
+
+  const removePerpetrator = (index) => {
+    if (form.perpetrators.length > 1) {
+      updateForm('perpetrators', form.perpetrators.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleVictimChange = (index, field, value) => {
+    const updated = [...form.victims];
+    updated[index] = { ...updated[index], [field]: value };
+    updateForm('victims', updated);
+  };
+
+  const addVictim = () => {
+    updateForm('victims', [...form.victims, { name: '', kelas: '', relation: '' }]);
+  };
+
+  const removeVictim = (index) => {
+    if (form.victims.length > 1) {
+      updateForm('victims', form.victims.filter((_, i) => i !== index));
     }
   };
 
@@ -238,7 +265,7 @@ export default function LaporanKejadianPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
-                onClick={() => { setSubmitted(false); setStep(1); setForm({ reporterName:'', reporterStatus:'', reporterPhone:'', reporterEmail:'', isAnonymous:false, perpName:'', perpClass:'', perpDescription:'', victimName:'', victimClass:'', victimRelation:'', incidentType:'', bullyingTypes:[], location:'', incidentDate:'', incidentTime:'', chronology:'', witnesses:[{name:'',kelas:'',role:''}], evidence:[], initialActions:'', reportedToCounselor:false, valuesViolated:[], severity:'sedang' }); }}
+                onClick={() => { setSubmitted(false); setStep(1); setForm({ reporterName:'', reporterStatus:'', reporterPhone:'', reporterEmail:'', isAnonymous:false, perpetrators:[{name:'',kelas:'',description:''}], victims:[{name:'',kelas:'',relation:''}], incidentType:'', bullyingTypes:[], location:'', incidentDate:'', incidentTime:'', chronology:'', witnesses:[{name:'',kelas:'',role:''}], evidence:[], initialActions:'', reportedToCounselor:false, valuesViolated:[], severity:'sedang' }); }}
                 className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold shadow-lg shadow-violet-200 transition-all"
               >
                 Buat Laporan Baru
@@ -392,7 +419,7 @@ export default function LaporanKejadianPage() {
             <div className="p-6 md:p-10">
               <button onClick={handlePrev} className="flex items-center gap-1 text-slate-400 hover:text-slate-600 text-sm font-medium mb-4 transition-colors"><ChevronLeft size={16} /> Kembali</button>
               <h2 className="text-xl font-bold text-slate-800 mb-1">Informasi Pelaku & Korban</h2>
-              <p className="text-slate-500 text-sm mb-6">Isi data pelaku dan korban sejelas mungkin untuk membantu investigasi.</p>
+              <p className="text-slate-500 text-sm mb-6">Isi data pelaku dan korban sejelas mungkin untuk membantu investigasi. Jika lebih dari satu, klik Tambah.</p>
 
               {errorMsg && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2"><AlertTriangle size={16} /> {errorMsg}</div>
@@ -404,20 +431,31 @@ export default function LaporanKejadianPage() {
                   <div className="w-6 h-6 bg-red-50 text-red-500 rounded-lg flex items-center justify-center text-xs font-black">2</div>
                   Informasi Terlapor (Pelaku)
                 </h3>
-                <div className="space-y-4 pl-4 border-l-2 border-red-100">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Nama Lengkap Pelaku</label>
-                    <input type="text" value={form.perpName} onChange={e => updateForm('perpName', e.target.value)} placeholder="Jika diketahui" className={inputClass} />
+                {form.perpetrators.map((perp, idx) => (
+                  <div key={idx} className="space-y-3 pl-4 border-l-2 border-red-100 mb-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Pelaku {form.perpetrators.length > 1 ? idx + 1 : ''}</span>
+                      {form.perpetrators.length > 1 && (
+                        <button onClick={() => removePerpetrator(idx)} className="text-red-400 hover:text-red-600 text-xs font-bold flex items-center gap-1"><X size={14} /> Hapus</button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Nama Lengkap Pelaku</label>
+                      <input type="text" value={perp.name} onChange={e => handlePerpChange(idx, 'name', e.target.value)} placeholder="Jika diketahui" className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Kelas / Jurusan</label>
+                      <input type="text" value={perp.kelas} onChange={e => handlePerpChange(idx, 'kelas', e.target.value)} placeholder="Misal: XI IPA 2" className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Ciri-ciri Fisik <span className="text-slate-400 font-normal">(opsional)</span></label>
+                      <textarea value={perp.description} onChange={e => handlePerpChange(idx, 'description', e.target.value)} placeholder="Tinggi, berambut pirang, berkacamata, dll." rows={2} className={textareaClass} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Kelas / Jurusan</label>
-                    <input type="text" value={form.perpClass} onChange={e => updateForm('perpClass', e.target.value)} placeholder="Misal: XI IPA 2" className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Ciri-ciri Fisik <span className="text-slate-400 font-normal">(opsional)</span></label>
-                    <textarea value={form.perpDescription} onChange={e => updateForm('perpDescription', e.target.value)} placeholder="Tinggi, berambut pirang, berkacamata, dll." rows={2} className={textareaClass} />
-                  </div>
-                </div>
+                ))}
+                <button onClick={addPerpetrator} className="flex items-center gap-1 text-red-600 hover:text-red-700 text-sm font-bold ml-4 transition-colors">
+                  <Plus size={16} /> Tambah Pelaku
+                </button>
               </div>
 
               {/* Korban */}
@@ -426,20 +464,31 @@ export default function LaporanKejadianPage() {
                   <div className="w-6 h-6 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center text-xs font-black">3</div>
                   Informasi Korban
                 </h3>
-                <div className="space-y-4 pl-4 border-l-2 border-blue-100">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Nama Lengkap Korban</label>
-                    <input type="text" value={form.victimName} onChange={e => updateForm('victimName', e.target.value)} placeholder="Jika diketahui" className={inputClass} />
+                {form.victims.map((vic, idx) => (
+                  <div key={idx} className="space-y-3 pl-4 border-l-2 border-blue-100 mb-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded">Korban {form.victims.length > 1 ? idx + 1 : ''}</span>
+                      {form.victims.length > 1 && (
+                        <button onClick={() => removeVictim(idx)} className="text-blue-400 hover:text-blue-600 text-xs font-bold flex items-center gap-1"><X size={14} /> Hapus</button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Nama Lengkap Korban</label>
+                      <input type="text" value={vic.name} onChange={e => handleVictimChange(idx, 'name', e.target.value)} placeholder="Jika diketahui" className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Kelas / Jurusan Korban</label>
+                      <input type="text" value={vic.kelas} onChange={e => handleVictimChange(idx, 'kelas', e.target.value)} placeholder="Misal: X IPS 1" className={inputClass} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Hubungan dengan Pelaku</label>
+                      <input type="text" value={vic.relation} onChange={e => handleVictimChange(idx, 'relation', e.target.value)} placeholder="Teman sekelas, senior, dll." className={inputClass} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Kelas / Jurusan Korban</label>
-                    <input type="text" value={form.victimClass} onChange={e => updateForm('victimClass', e.target.value)} placeholder="Misal: X IPS 1" className={inputClass} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Hubungan dengan Pelaku</label>
-                    <input type="text" value={form.victimRelation} onChange={e => updateForm('victimRelation', e.target.value)} placeholder="Teman sekelas, senior, dll." className={inputClass} />
-                  </div>
-                </div>
+                ))}
+                <button onClick={addVictim} className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-bold ml-4 transition-colors">
+                  <Plus size={16} /> Tambah Korban
+                </button>
               </div>
 
               <div className="flex justify-between mt-8">
@@ -685,8 +734,16 @@ export default function LaporanKejadianPage() {
                   {form.location && <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Lokasi</span><span className="text-slate-700">{form.location}</span></div>}
                   {form.incidentDate && <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Tanggal</span><span className="text-slate-700">{new Date(form.incidentDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>}
                   {form.incidentTime && <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Waktu</span><span className="text-slate-700">{form.incidentTime}</span></div>}
-                  {form.perpName && <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Pelaku</span><span className="text-slate-700">{form.perpName}{form.perpClass ? ` (${form.perpClass})` : ''}</span></div>}
-                  {form.victimName && <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Korban</span><span className="text-slate-700">{form.victimName}{form.victimClass ? ` (${form.victimClass})` : ''}</span></div>}
+                  {form.perpetrators.some(p => p.name) && (
+                    <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Pelaku</span>
+                      <div className="flex flex-wrap gap-1">{form.perpetrators.filter(p => p.name).map((p, i) => <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 text-xs font-bold rounded-lg">{p.name}{p.kelas ? ` (${p.kelas})` : ''}</span>)}</div>
+                    </div>
+                  )}
+                  {form.victims.some(v => v.name) && (
+                    <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Korban</span>
+                      <div className="flex flex-wrap gap-1">{form.victims.filter(v => v.name).map((v, i) => <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg">{v.name}{v.kelas ? ` (${v.kelas})` : ''}</span>)}</div>
+                    </div>
+                  )}
                   <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Pelapor</span><span className="font-bold text-slate-800">{form.isAnonymous ? 'Anonim (identitas tersembunyi)' : (form.reporterName || '-')}</span></div>
                   {form.evidence.length > 0 && (
                     <div className="flex items-start gap-3"><span className="text-slate-400 w-32 shrink-0">Bukti</span>

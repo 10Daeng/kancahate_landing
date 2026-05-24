@@ -16,11 +16,17 @@ CREATE TABLE IF NOT EXISTS incident_reports (
   is_anonymous BOOLEAN DEFAULT FALSE,
 
   -- 2. Informasi Terlapor (Pelaku)
+  -- perpetrators: JSONB array for multiple perpetrators [{name, kelas, description}]
+  perpetrators JSONB DEFAULT '[]',
+  -- Legacy single-perpetrator fields (kept for backward compatibility)
   perp_name TEXT,
   perp_class TEXT,
   perp_description TEXT,
 
   -- 3. Informasi Korban
+  -- victims: JSONB array for multiple victims [{name, kelas, relation}]
+  victims JSONB DEFAULT '[]',
+  -- Legacy single-victim fields (kept for backward compatibility)
   victim_name TEXT,
   victim_class TEXT,
   victim_relation TEXT,

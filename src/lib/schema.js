@@ -141,6 +141,40 @@ export const rosenbergResults = {
   ...assessmentResultBase,
 };
 
+export const incidentReports = {
+  id: uuid('id').primaryKey().defaultRandom(),
+  reporterId: uuid('reporter_id').references(() => users.id, { onDelete: 'setNull' }),
+  reporterName: text('reporter_name'),
+  reporterStatus: text('reporter_status').$type('siswa', 'orang_tua', 'guru', 'saksi', 'lainnya'),
+  reporterPhone: text('reporter_phone'),
+  reporterEmail: text('reporter_email'),
+  isAnonymous: boolean('is_anonymous').default(false),
+  perpetrators: jsonb('perpetrators').$type(),
+  perpName: text('perp_name'),
+  perpClass: text('perp_class'),
+  perpDescription: text('perp_description'),
+  victims: jsonb('victims').$type(),
+  victimName: text('victim_name'),
+  victimClass: text('victim_class'),
+  victimRelation: text('victim_relation'),
+  incidentType: text('incident_type').notNull(),
+  bullyingTypes: jsonb('bullying_types').$type(),
+  location: text('location'),
+  incidentDate: timestamp('incident_date'),
+  incidentTime: text('incident_time'),
+  chronology: text('chronology'),
+  witnesses: jsonb('witnesses').$type(),
+  evidence: jsonb('evidence').$type(),
+  initialActions: text('initial_actions'),
+  reportedToCounselor: boolean('reported_to_counselor').default(false),
+  valuesViolated: jsonb('values_violated').$type(),
+  severity: text('severity').default('sedang').$type('rendah', 'sedang', 'tinggi'),
+  status: text('status').default('baru').$type('baru', 'ditinjau', 'ditindaklanjuti', 'selesai'),
+  adminNotes: text('admin_notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+};
+
 export const schema = {
   users,
   userProfiles,
@@ -159,4 +193,5 @@ export const schema = {
   gad7Results,
   phq9Results,
   rosenbergResults,
+  incidentReports,
 };
