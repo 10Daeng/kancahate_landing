@@ -7,17 +7,34 @@ export default function HeroChatMockup() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    // Sequence timing
-    const timers = [
-      setTimeout(() => setStep(1), 500),    // User message 1
-      setTimeout(() => setStep(2), 1500),   // Kai typing 1
-      setTimeout(() => setStep(3), 3500),   // Kai message 1
-      setTimeout(() => setStep(4), 5000),   // User message 2
-      setTimeout(() => setStep(5), 6500),   // Kai typing 2
-      setTimeout(() => setStep(6), 9000),   // Kai message 2
-    ];
+    let timers = [];
+    let loopTimer;
 
-    return () => timers.forEach(clearTimeout);
+    const runSequence = () => {
+      setStep(0); // Reset animation
+      timers.forEach(clearTimeout);
+      
+      timers = [
+        setTimeout(() => setStep(1), 500),    // User message 1
+        setTimeout(() => setStep(2), 1500),   // Kai typing 1
+        setTimeout(() => setStep(3), 3500),   // Kai message 1
+        setTimeout(() => setStep(4), 5000),   // User message 2
+        setTimeout(() => setStep(5), 6500),   // Kai typing 2
+        setTimeout(() => setStep(6), 9000),   // Kai message 2
+      ];
+    };
+
+    runSequence();
+    
+    // Loop the sequence every 14 seconds
+    loopTimer = setInterval(() => {
+      runSequence();
+    }, 14000);
+
+    return () => {
+      timers.forEach(clearTimeout);
+      clearInterval(loopTimer);
+    };
   }, []);
 
   return (
@@ -25,7 +42,20 @@ export default function HeroChatMockup() {
       {/* Decorative background glow behind the mockup */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-violet-300/30 rounded-full blur-[60px] -z-10" />
 
-      <div className="flex flex-col gap-4 relative z-10" style={{ transform: 'rotateY(-5deg) rotateX(2deg)' }}>
+      {/* Continuous floating container */}
+      <motion.div 
+        className="flex flex-col gap-4 relative z-10" 
+        animate={{ 
+          y: [0, -15, 0],
+          rotateY: [-5, -1, -5],
+          rotateX: [2, 4, 2]
+        }}
+        transition={{
+          duration: 6,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
         
         {/* User Message 1 */}
         <AnimatePresence>
@@ -137,7 +167,7 @@ export default function HeroChatMockup() {
           )}
         </AnimatePresence>
 
-      </div>
+      </motion.div>
     </div>
   );
 }
