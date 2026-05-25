@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { supabase } from '@/lib/supabaseClient';
 import {
   Users, Shield, ChevronLeft, Plus, Edit, Ban, Unlock,
   Loader2, AlertCircle, X, KeyRound, Search, RefreshCw,
@@ -156,12 +155,12 @@ export default function UserManagementPage() {
       }
       setUser(sessionData.user);
 
-      // Bypass superadmin check for now since DB is gone
-      // We will handle real roles in Sprint 3
-      setIsSuperadmin(true);
+      // Check if real superadmin
+      const adminStatus = await isCurrentUserSuperadmin();
+      setIsSuperadmin(adminStatus.isSuperadmin);
 
-      // We won't fetch users right now because DB queries still use Supabase in userManagementService
-      // await Promise.all([fetchUsers(), fetchAdmins(), fetchAuditLogs()]);
+      // Now fetch data
+      await Promise.all([fetchUsers(), fetchAdmins(), fetchAuditLogs()]);
     } catch (error) {
       console.error('Auth error:', error);
       router.push('/login');
@@ -199,11 +198,8 @@ export default function UserManagementPage() {
 
     setActionLoading(true);
     try {
-      // Find user by email from auth.users
-      const { data: { users: foundUsers }, error } = await supabase.auth.admin.listUsers();
-      if (error) throw error;
-
-      const targetUser = foundUsers?.find(u => u.email === addAdminForm.email);
+      // Find user by email from state
+      const targetUser = users.find(u => u.email === addAdminForm.email);
       if (!targetUser) {
         alert('User dengan email tersebut tidak ditemukan');
         return;

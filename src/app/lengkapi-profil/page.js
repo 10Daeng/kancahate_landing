@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { useSession } from 'next-auth/react';
 import { createUserProfile } from '@/services/assessmentService';
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
@@ -13,6 +13,7 @@ export default function LengkapiProfil() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const { data: session, status } = useSession();
   const [step, setStep] = useState(1);
   
   const [formData, setFormData] = useState({
@@ -40,27 +41,17 @@ export default function LengkapiProfil() {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
+      if (status === 'loading') return;
       
-      if (!user) {
+      if (!session) {
         // Not logged in, redirect to login
         router.push('/login');
         return;
       }
 
-      // Check if profile already exists
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profile) {
-        // Profile already exists, redirect to dashboard
-        router.push('/dashboard');
-        return;
-      }
-
+      setUser(session.user);
+      
+      // Profile check skipped since it needs Drizzle implementation
       setLoading(false);
     } catch (error) {
       console.error('Error checking auth:', error);

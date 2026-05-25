@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { supabase } from '@/lib/supabaseClient';
+import { getUserCounselingSessions } from '@/services/counselingService';
 import { getAssessmentResults } from '@/services/assessmentService';
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
@@ -38,14 +38,9 @@ export default function UserDashboard() {
       setAssessments(results);
 
       // Fetch chat sessions
-      const { data: sessions, error } = await supabase
-        .from('counseling_sessions')
-        .select('*')
-        .eq('user_email', user.email)
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const { data: sessions, success } = await getUserCounselingSessions(user.email);
 
-      if (!error && sessions) {
+      if (success && sessions) {
         setChatSessions(sessions);
       }
     } catch (error) {

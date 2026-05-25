@@ -1,7 +1,7 @@
 // --- ASSESSMENT ANALYTICS SERVICE ---
 // Menyimpan data tes anonim (tanpa login) untuk analytics & marketing
 
-import { supabase } from '../lib/supabaseClient';
+// Removed supabase import
 
 /**
  * Hash IP address untuk privacy (tidak menyimpan raw IP)
@@ -86,27 +86,7 @@ export async function saveAssessmentAnalytics(data, request) {
     };
 
     // Save to assessment_analytics table
-    const { data: result, error } = await supabase
-      .from('assessment_analytics')
-      .insert([analyticsData])
-      .select()
-      .single();
-
-    if (error) {
-      // Table might not exist yet - log but don't fail the request
-      console.warn('Assessment analytics table note:', error.message);
-      // Return success anyway - email is more important than analytics
-      return {
-        success: true,
-        data: analyticsData,
-        analyticsSkipped: true
-      };
-    }
-
-    return {
-      success: true,
-      data: result || analyticsData
-    };
+    return { success: false, error: 'Not implemented (Supabase removed)' };
   } catch (error) {
     console.error('Error saving analytics:', error);
     return {
@@ -123,29 +103,7 @@ export async function saveAssessmentAnalytics(data, request) {
 export async function getAssessmentAnalytics() {
   try {
     // Check if user is admin (this should be protected by middleware)
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      throw new Error('Unauthorized');
-    }
-
-    // Check if user is admin (you might need an admin table)
-    // For now, just return empty if not admin
-    const isAdmin = user.email?.includes('admin@') || user.user_metadata?.role === 'admin';
-
-    if (!isAdmin) {
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from('assessment_analytics')
-      .select('*')
-      .order('test_date', { ascending: false })
-      .limit(1000);
-
-    if (error) throw error;
-
-    return data || [];
+    return { success: false, error: 'Not implemented (Supabase removed)' };
   } catch (error) {
     console.error('Error fetching analytics:', error);
     return [];

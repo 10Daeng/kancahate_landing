@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabaseClient';
+// import { supabase } from '@/lib/supabaseClient';
 import { Mail, AlertTriangle, CheckCircle, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
@@ -19,14 +19,9 @@ export default function ForgotPasswordPage() {
     setSuccessMsg('');
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
-
-      setSuccessMsg('Link reset password telah dikirim ke email Anda. Silakan cek inbox (atau folder spam).');
-      setEmail(''); // Clear form
+      alert("Fitur lupa password sedang dalam perbaikan (migrasi database). Silakan hubungi admin.");
+      setLoading(false);
+      return;
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || 'Terjadi kesalahan. Silakan coba lagi.');

@@ -1,7 +1,7 @@
 // --- VECTOR SERVICE (Supabase + pgvector) ---
 // Mengelola embedding generation dan vector search menggunakan Supabase
 
-import { supabase } from '../lib/supabaseClient';
+// Removed supabase import
 
 /**
  * CONFIGURATION
@@ -222,23 +222,7 @@ export async function insertKnowledge(knowledge) {
     const embedding = await generateEmbedding(textToEmbed);
 
     const { data, error } = await supabase
-      .from('clinical_knowledge')
-      .insert({
-        category: knowledge.category,
-        subcategory: knowledge.subcategory,
-        title: knowledge.title,
-        content: knowledge.content,
-        metadata: knowledge.metadata || {},
-        priority: knowledge.priority || 1,
-        embedding: `[${embedding.join(',')}]` // Supabase format for vector type
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    console.log('[Vector] Knowledge inserted:', data.id);
-    return { success: true, data };
+    return { success: false, error: 'Not implemented (Supabase removed)' };
   } catch (error) {
     console.error('[Vector] Insert failed:', error);
     return { success: false, error: error.message };
@@ -283,23 +267,7 @@ export async function searchKnowledge(
     };
 
     // Call Supabase RPC function untuk vector search dengan filters
-    const { data, error } = await supabase.rpc('match_clinical_knowledge', rpcParams);
-
-    if (error) throw error;
-
-    console.log(`[Vector] Found ${data.length} results for: "${query}"`, filterMetadata);
-
-    return data.map(item => ({
-      id: item.id,
-      category: item.category,
-      subcategory: item.subcategory,
-      title: item.title,
-      content: item.content,
-      description: item.content, // Alias for compatibility
-      metadata: item.metadata,
-      priority: item.priority,
-      score: item.similarity
-    }));
+    return { success: false, error: 'Not implemented (Supabase removed)' };
   } catch (error) {
     console.error('[Vector] Search failed:', error);
     return [];
@@ -343,13 +311,7 @@ export async function bulkInsertKnowledge(knowledges) {
 export async function initializeKnowledgeBase() {
   try {
     // Check if already initialized
-    const { count } = await supabase
-      .from('clinical_knowledge')
-      .select('*', { count: 'exact', head: true });
-
-    if (count && count > 0) {
-      console.log('[Vector] Knowledge base already initialized with', count, 'entries');
-      return { success: true, message: 'Already initialized', count };
+    return { success: false, count: 0 };
     }
 
     // Import and transform knowledge from rag_knowledge_base.js
@@ -476,13 +438,7 @@ export async function initializeKnowledgeBase() {
  */
 export async function getKnowledgeStats() {
   try {
-    const { data, error } = await supabase
-      .from('clinical_knowledge')
-      .select('category, priority', { count: 'exact' });
-
-    if (error) throw error;
-
-    const byCategory = {};
+    return { success: false, error: 'Not implemented (Supabase removed)' };
     data.forEach(item => {
       byCategory[item.category] = (byCategory[item.category] || 0) + 1;
     });

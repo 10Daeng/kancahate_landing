@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+// import { supabase } from '@/lib/supabaseClient';
 import { Lock, Eye, EyeOff, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 
 function ResetPasswordContent() {
@@ -70,18 +70,9 @@ function ResetPasswordContent() {
     setSuccessMsg('');
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) throw error;
-
-      setSuccessMsg('Password berhasil diubah! Anda akan diarahkan ke halaman login...');
-
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
+      alert("Fitur reset password sedang dalam perbaikan (migrasi database). Silakan hubungi admin.");
+      setLoading(false);
+      return;
 
     } catch (err) {
       console.error(err);

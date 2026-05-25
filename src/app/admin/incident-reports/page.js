@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { supabase } from '@/lib/supabaseClient';
+import { useSession, signOut } from 'next-auth/react';
 import {
   ChevronLeft, RefreshCw, Loader2, Shield, Eye, CheckCircle,
   AlertTriangle, Clock, X, FileText, ChevronRight, User,
