@@ -56,3 +56,25 @@ export async function getAllUsers() {
     return { success: false, error: error.message };
   }
 }
+
+export async function getAllAssessments() {
+  try {
+    const assessments = await db.select().from(schema.assessmentResults).orderBy(desc(schema.assessmentResults.createdAt));
+    
+    // Map camelCase to snake_case
+    const mappedAssessments = assessments.map(a => ({
+      ...a,
+      user_id: a.userId,
+      assessment_type: a.assessmentType,
+      assessment_name: a.assessmentName,
+      max_score: a.maxScore,
+      result_data: a.resultData,
+      created_at: a.createdAt
+    }));
+
+    return { success: true, data: mappedAssessments };
+  } catch (error) {
+    console.error('Error fetching assessments:', error);
+    return { success: false, error: error.message };
+  }
+}

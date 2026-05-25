@@ -13,9 +13,7 @@ import {
   Mic,
   MicOff,
   Volume2,
-  VolumeX,
-  Eye,
-  EyeOff
+  VolumeX
 } from 'lucide-react';
 
 // Import encryption service
@@ -395,10 +393,8 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
   const [isTTSEnabled, setIsTTSEnabled] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
 
-  // Gen Z UX Features
   const [isNightMode, setIsNightMode] = useState(false);
   const [isTypingSoundEnabled, setIsTypingSoundEnabled] = useState(true);
-  const [isIncognito, setIsIncognito] = useState(false);
   const [finalQuote, setFinalQuote] = useState("");
   const audioContextRef = useRef(null);
   const nextNoteTimeRef = useRef(0);
@@ -673,7 +669,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
       const draft = {
         session_id: sessionId,
         phase,
-        messages: isIncognito ? [] : messages,
+        messages,
         user_data: { ...userData, intake_index: intakeIndex },
         category: category.title,
         current_risk_level: currentRiskLevel.level,
@@ -988,7 +984,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
             persona_id: userData.persona || 'coach',
             risk_level: currentRiskLevel.level,
             risk_priority: currentRiskLevel.priority || 1,
-            chat_history: isIncognito ? [] : messages,
+            chat_history: messages,
             message_count: messages.length,
             user_message_count: userMessageCount,
             summary: messages.slice(-3).map(m => m.parts[0]?.text?.substring(0, 100)).join(' ') || '',
@@ -1708,15 +1704,6 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
               <span>Suara {isTTSEnabled ? 'Aktif' : 'Mati'}</span>
             </button>
           )}
-
-          <button
-            onClick={() => setIsIncognito(!isIncognito)}
-            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${isIncognito ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'}`}
-            title={isIncognito ? "Mode Privasi Aktif (Percakapan tidak disimpan)" : "Mode Privasi Nonaktif (Percakapan anonim disimpan untuk metrik)"}
-          >
-            {isIncognito ? <EyeOff size={14} /> : <Eye size={14} />}
-            <span>Privasi {isIncognito ? 'Aktif' : 'Nonaktif'}</span>
-          </button>
         </div>
         
         <div className="flex gap-2 w-full">

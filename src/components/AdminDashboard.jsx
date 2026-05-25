@@ -23,7 +23,9 @@ import {
   MessageCircle,
   TrendingUp,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Download,
+  Database
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -34,8 +36,9 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sessions, setSessions] = useState([]);
   const [users, setUsers] = useState([]);
+  const [assessments, setAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' or 'users'
+  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions', 'users', or 'research'
 
   const { data: sessionData, status } = useSession();
 
@@ -59,6 +62,7 @@ export default function AdminDashboard() {
     setSession(sessionData);
     fetchSessions();
     fetchUsers();
+    fetchAssessments();
   }, [sessionData, status]);
 
   const fetchSessions = async () => {
@@ -95,6 +99,74 @@ export default function AdminDashboard() {
       });
       setUsers(enrichedUsers);
     }
+  };
+
+  const fetchAssessments = async () => {
+    const { getAllAssessments } = await import('@/services/adminService');
+    const { success, data, error } = await getAllAssessments();
+    if (success) {
+      setAssessments(data || []);
+    } else {
+      console.error("Error fetching assessments:", error);
+    }
+  };
+
+  const exportToCSV = (type) => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    let dataToExport = [];
+    let filename = "";
+
+    if (type === 'sessions') {
+      filename = `kancah_ate_sessions_anon_${new Date().toISOString().split('T')[0]}.csv`;
+      const headers = ["Session ID", "Risk Level", "Priority", "Category", "Subtopic", "Started At", "Duration (s)", "Message Count", "Summary", "Chat History"];
+      csvContent += headers.join(",") + "\\r\\n";
+
+      dataToExport = sessions.map(s => {
+        // Remove PII
+        const anonymizedChat = (s.chat_history || []).map(chat => `${chat.role}: ${chat.parts[0]?.text?.replace(/\\n/g, ' ')}`).join(" | ");
+        return [
+          s.id,
+          s.risk_level,
+          s.risk_priority,
+          s.category || 'N/A',
+          s.subtopic || 'N/A',
+          s.started_at,
+          s.duration_seconds || 0,
+          s.message_count,
+          `"${(s.summary || '').replace(/"/g, '""')}"`,
+          `"${anonymizedChat.replace(/"/g, '""')}"`
+        ];
+      });
+    } else if (type === 'assessments') {
+      filename = `kancah_ate_assessments_anon_${new Date().toISOString().split('T')[0]}.csv`;
+      const headers = ["Assessment ID", "Type", "Name", "Score", "Max Score", "Severity", "Date", "Result Data"];
+      csvContent += headers.join(",") + "\\r\\n";
+
+      dataToExport = assessments.map(a => {
+        return [
+          a.id,
+          a.assessment_type,
+          a.assessment_name,
+          a.score,
+          a.max_score,
+          a.severity,
+          a.created_at,
+          `"${JSON.stringify(a.result_data || {}).replace(/"/g, '""')}"`
+        ];
+      });
+    }
+
+    dataToExport.forEach(row => {
+      csvContent += row.join(",") + "\\r\\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Re-fetch users when sessions change
@@ -361,6 +433,17 @@ export default function AdminDashboard() {
               {users.length}
             </span>
           </button>
+          <button
+            onClick={() => setActiveTab('research')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+              activeTab === 'research'
+                ? 'bg-violet-600 text-white shadow-lg shadow-violet-200'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Database size={18} />
+            Data Riset
+          </button>
         </div>
 
         {/* Search & Filter */}
@@ -576,6 +659,61 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
+          </div>
+          </div>
+        )}
+
+        {/* Research Tab */}
+        {activeTab === 'research' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center max-w-2xl mx-auto mt-8">
+            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Database size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Pusat Ekspor Data Riset (Anonim)</h2>
+            <p className="text-slate-500 mb-8 leading-relaxed">
+              Semua data yang diekspor dari halaman ini telah diproses secara otomatis oleh sistem untuk menghilangkan informasi identitas pribadi (PII) seperti Nama, Email, dan ID Pengguna. Data siap digunakan untuk keperluan analisis dan riset.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => exportToCSV('sessions')}
+                className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-violet-100 hover:border-violet-600 hover:bg-violet-50 transition-all group"
+              >
+                <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageCircle size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">Sesi Curhat</h3>
+                  <p className="text-sm text-slate-500 mt-1">{sessions.length} record</p>
+                </div>
+                <div className="flex items-center gap-2 text-violet-600 font-medium text-sm mt-2">
+                  <Download size={16} /> Unduh CSV
+                </div>
+              </button>
+
+              <button
+                onClick={() => exportToCSV('assessments')}
+                className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-teal-100 hover:border-teal-600 hover:bg-teal-50 transition-all group"
+              >
+                <div className="w-12 h-12 bg-teal-100 text-teal-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <TrendingUp size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">Hasil Psikotes</h3>
+                  <p className="text-sm text-slate-500 mt-1">{assessments.length} record</p>
+                </div>
+                <div className="flex items-center gap-2 text-teal-600 font-medium text-sm mt-2">
+                  <Download size={16} /> Unduh CSV
+                </div>
+              </button>
+            </div>
+            
+            <div className="mt-8 p-4 bg-yellow-50 rounded-xl border border-yellow-100 text-left flex gap-3 items-start">
+              <AlertTriangle className="text-yellow-600 shrink-0 mt-0.5" size={20} />
+              <div className="text-sm text-yellow-800">
+                <strong>Catatan Privasi:</strong> Meskipun identitas disembunyikan, perhatikan bahwa beberapa percakapan atau laporan mungkin secara tidak sengaja memuat nama spesifik yang diketik manual oleh pengguna. Harap tinjau kembali data secara berkala.
+              </div>
+            </div>
           </div>
         )}
       </div>
