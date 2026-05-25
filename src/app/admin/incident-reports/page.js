@@ -141,20 +141,25 @@ export default function IncidentReportsAdmin() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 lg:px-10 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/kancah-private-auth')} className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><ChevronLeft size={20} className="text-slate-600" /></button>
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Shield size={20} className="text-rose-500" />Laporan Kejadian</h1>
-              <p className="text-xs text-slate-400">Kelola laporan insiden kekerasan, bullying & intoleransi</p>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 lg:px-10 py-8">
+        
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <Shield size={24} className="text-rose-500" /> Laporan Kejadian
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Kelola laporan insiden kekerasan, bullying & intoleransi</p>
           </div>
-          <button onClick={fetchReports} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"><RefreshCw size={16} />Refresh</button>
+          <button 
+            onClick={fetchReports} 
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-violet-600 hover:bg-violet-50 rounded-xl font-bold text-sm transition-colors shadow-sm"
+          >
+            <RefreshCw size={18} />
+            Refresh Data
+          </button>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-10 py-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {Object.entries(STATUS_CONFIG).map(([key, config]) => {
             const count = reports.filter(r => r.status === key).length;

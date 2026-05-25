@@ -194,50 +194,28 @@ export default function AdminCategoriesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/admin/articles"
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-              >
-                <ChevronLeft size={20} />
-              </Link>
-              <h1 className="text-lg font-bold text-slate-800">Kelola Kategori</h1>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Link
-                href="/admin/dashboard"
-                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold text-sm transition-colors"
-              >
-                <BarChart3 size={16} />
-                Dashboard
-              </Link>
-              {!showForm && (
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-sm transition-colors"
-                >
-                  <Plus size={16} />
-                  Kategori Baru
-                </button>
-              )}
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl font-bold text-sm transition-colors"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <Link href="/admin/articles" className="inline-flex items-center text-sm font-bold text-violet-600 hover:text-violet-700 mb-2">
+              <ChevronLeft size={16} className="mr-1" /> Kembali ke Publikasi
+            </Link>
+            <h1 className="text-2xl font-bold text-slate-800">Kelola Kategori</h1>
+          </div>
+          {!showForm && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-sm transition-colors shadow-sm"
+            >
+              <Plus size={16} />
+              Kategori Baru
+            </button>
+          )}
+        </div>
+
         {/* Form */}
         {showForm && (
           <div className="bg-white rounded-2xl p-6 border border-slate-200 mb-6">
