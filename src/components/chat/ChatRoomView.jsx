@@ -402,12 +402,9 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
 
-  //  // Gen Z UX: Auto Night Mode
+  // Gen Z UX: Auto Night Mode disabled because it clashes with light mode modal
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour >= 21 || hour < 6) {
-      setIsNightMode(true);
-    }
+    // Night mode disabled
   }, []);
 
   // Gen Z UX: Typing Sound Effect (Web Audio API)
