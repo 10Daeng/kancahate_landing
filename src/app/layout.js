@@ -28,6 +28,7 @@ export const viewport = {
 
 import { Providers } from "@/components/Providers";
 import BottomNav from "@/components/shared/BottomNav";
+import { GoogleAnalytics } from '@next/third-parties/google';
 
 export default function RootLayout({ children }) {
   return (
@@ -38,6 +39,7 @@ export default function RootLayout({ children }) {
           <BottomNav />
         </Providers>
       </body>
+      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX"} />
     </html>
   );
 }
