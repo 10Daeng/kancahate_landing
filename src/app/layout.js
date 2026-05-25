@@ -39,7 +39,7 @@ export default function RootLayout({ children }) {
           <BottomNav />
         </Providers>
       </body>
-      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX"} />
+      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || "G-3TMHXGZXB8"} />
     </html>
   );
 }
