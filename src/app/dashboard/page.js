@@ -85,6 +85,12 @@ export default function UserDashboard() {
                  <span className="font-bold text-slate-700">{user?.email}</span>
                  <span>Member sejak {new Date(user?.created_at).toLocaleDateString('id-ID', {year: 'numeric', month: 'long'})}</span>
               </div>
+              {user?.role === 'admin' || (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').includes(user?.email) ? (
+                 <Link href="/admin/dashboard" className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold transition-all shadow-sm">
+                   <Shield size={18} />
+                   <span className="hidden sm:inline">Panel Admin</span>
+                 </Link>
+              ) : null}
               <button 
                 onClick={handleLogout}
                 className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:border-red-200 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-xl font-bold transition-all shadow-sm"

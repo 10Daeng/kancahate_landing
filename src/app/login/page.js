@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Lock, Mail, AlertTriangle, Loader2, Sparkles, ArrowLeft } from 'lucide-react';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 
 // Floating emoji decoration
 function FloatingEmoji({ emoji, style }) {
@@ -57,7 +57,14 @@ export default function LoginPage() {
         if (result?.error) {
           setErrorMsg(result.error);
         } else {
-          router.push('/dashboard');
+          // Cek session untuk redirect yang sesuai
+          const session = await getSession();
+          const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',') : [];
+          if (session?.user?.role === 'admin' || adminEmails.includes(session?.user?.email)) {
+            router.push('/admin/dashboard');
+          } else {
+            router.push('/dashboard');
+          }
         }
       } else {
         // Karena NextAuth belum memiliki sign-up via credentials di authOptions,
@@ -74,6 +81,8 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    // Kita arahkan ke /dashboard, tetapi jika butuh cek admin, 
+    // akan lebih baik dicek di dalam komponen /dashboard itu sendiri.
     await signIn('google', { callbackUrl: '/dashboard' });
   };
 
