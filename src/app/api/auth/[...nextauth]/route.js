@@ -10,11 +10,15 @@ import { eq } from "drizzle-orm";
 
 export const authOptions = {
   providers: [
-    // You can add Google Provider if you have credentials
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_SECRET,
-    }),
+    // Add Google Provider if credentials exist
+    ...(process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ID
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_SECRET,
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
