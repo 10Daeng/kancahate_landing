@@ -5,8 +5,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { eq } from "drizzle-orm";
-// We might need to handle passwords, but since we're using Credentials, we'll need bcrypt or similar.
-// For now, let's keep it simple or use Google Auth since it's easier and more secure.
+import bcrypt from "bcryptjs";
 
 export const authOptions = {
   providers: [
@@ -45,14 +44,53 @@ export const authOptions = {
             where: eq(schema.users.email, credentials.email)
           });
 
-          // In production, you must use bcrypt to compare password hashes!
-          // Currently we bypass password check if user exists in Neon DB
-          if (user) {
-            return user;
+          if (!user) {
+            throw new Error("Email atau password salah.");
           }
-          return null;
+
+          // Cek apakah akun sedang terkunci
+          if (user.lockedUntil && new Date() < new Date(user.lockedUntil)) {
+            const minutesLeft = Math.ceil((new Date(user.lockedUntil) - new Date()) / 60000);
+            throw new Error(`Akun terkunci karena terlalu banyak percobaan gagal. Coba lagi dalam ${minutesLeft} menit.`);
+          }
+
+          // Validasi Password
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
+
+          if (!isPasswordValid) {
+            // Catat kegagalan
+            const newAttempts = (user.failedLoginAttempts || 0) + 1;
+            const updateData = { failedLoginAttempts: newAttempts };
+            
+            // Kunci akun jika sudah 5x gagal
+            if (newAttempts >= 5) {
+              updateData.lockedUntil = new Date(Date.now() + 15 * 60000); // 15 menit dari sekarang
+            }
+            
+            await db.update(schema.users)
+              .set(updateData)
+              .where(eq(schema.users.id, user.id));
+
+            if (newAttempts >= 5) {
+               throw new Error("Terlalu banyak percobaan gagal. Akun dikunci selama 15 menit.");
+            }
+            throw new Error("Email atau password salah.");
+          }
+
+          // Jika berhasil login, reset counter
+          if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+            await db.update(schema.users)
+              .set({ failedLoginAttempts: 0, lockedUntil: null })
+              .where(eq(schema.users.id, user.id));
+          }
+
+          return user;
+
         } catch (e) {
-          console.error("Database connection failed, falling back to emergency login:", e);
+          console.error("Login failed:", e);
+          if (e.message.includes("Akun terkunci") || e.message.includes("salah")) {
+             throw e;
+          }
           return null;
         }
       }

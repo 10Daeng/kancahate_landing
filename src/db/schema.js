@@ -8,6 +8,8 @@ export const users = pgTable('users', {
   role: varchar('role', { length: 50 }).default('user'),
   isActive: boolean('is_active').default(true),
   emailVerified: timestamp('email_verified'),
+  failedLoginAttempts: integer('failed_login_attempts').default(0),
+  lockedUntil: timestamp('locked_until'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
