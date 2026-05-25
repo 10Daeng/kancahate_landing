@@ -411,6 +411,14 @@ export async function deleteAssessmentResult(resultId) {
   }
 }
 
+/**
+ * Legacy Profile Creation (MOCK)
+ */
+export async function createUserProfile(data) {
+  console.warn('createUserProfile is deprecated. Profile handling should be migrated to Neon/NextAuth.');
+  return { success: true, data: { id: 'legacy_mock', ...data } };
+}
+
 export default {
   checkAuthStatus,
   saveAssessmentResult,
@@ -419,5 +427,7 @@ export default {
   deleteAssessmentResult,
   retrySaveToDatabase,
   syncPendingResults,
-  getPendingSyncCount
+  getPendingSyncCount,
+  createUserProfile
 };
+

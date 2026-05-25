@@ -2,7 +2,7 @@
 -- Standardized school bullying/violence reporting format
 -- Covers: Reporter identity, perpetrator info, victim info, incident details,
 -- chronology (5W1H), witnesses, evidence, initial actions, values violated
--- (BSAN/Permendikdasmen No. 6/2026, Nilai SOBAT/Kemendikdasmen, 7 Kebiasaan Baik Anak Indonesia)
+-- (Budaya Sekolah Aman Nyaman, 7 Kebiasaan Baik Anak Indonesia, Nilai SOBAT)
 
 CREATE TABLE IF NOT EXISTS incident_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -76,6 +76,6 @@ COMMENT ON COLUMN incident_reports.incident_type IS 'Jenis insiden: kekerasan_fi
 COMMENT ON COLUMN incident_reports.bullying_types IS 'Sub-jenis bullying: fisik, verbal, psikologis/sosial, siber';
 COMMENT ON COLUMN incident_reports.witnesses IS 'Array saksi [{name, class, role}]';
 COMMENT ON COLUMN incident_reports.evidence IS 'Array bukti [{type, description}] type: foto, video, screenshot, rekaman_suara, visum, barang_rusak';
-COMMENT ON COLUMN incident_reports.values_violated IS 'Nilai-nilai yang dilanggar: BSAN (bsan_spiritual, bsan_fisik, bsan_psikologis, bsan_digital), SOBAT (sobat_solid, sobat_optimis, sobat_berorientasi_pelayanan, sobat_akuntabel, sobat_tangguh), 7 Kebiasaan Baik (habit_jujur, habit_adil, habit_toleran, habit_peduli, habit_menghormati, habit_bertanggung_jawab, habit_bekerja_sama)';
+COMMENT ON COLUMN incident_reports.values_vsqliolated IS 'Nilai-nilai yang dilanggar: budaya_sekolah_aman, kebiasaan_baik_indonesia, nilai_sobat';
 COMMENT ON COLUMN incident_reports.severity IS 'Tingkat keparahan: rendah, sedang, tinggi';
 COMMENT ON COLUMN incident_reports.status IS 'Status laporan: baru, ditinjau, ditindaklanjuti, selesai';

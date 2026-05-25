@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { useSession } from 'next-auth/react';
 import { getAllArticlesAdmin, getCategories, createArticle, updateArticle, deleteArticle } from '@/services/articleService';
 import {
   ArrowLeft, Plus, Edit2, Trash2, Eye, Search, 
@@ -51,24 +52,22 @@ export default function AdminArticles() {
     setLoading(false);
   };
 
-  const checkAdminAndFetch = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+  const { data: sessionData, status } = useSession();
+
+  useEffect(() => {
+    if (status === 'loading') return;
+
     const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || 'lenterabatin.id@gmail.com')
       .split(',')
       .map(email => email.trim().toLowerCase());
     
-    if (!session || !adminEmails.includes(session.user.email.toLowerCase())) {
+    if (!sessionData || !adminEmails.includes(sessionData.user.email.toLowerCase())) {
       router.push('/');
       return;
     }
 
-    await fetchData();
-  };
-
-  useEffect(() => {
-    checkAdminAndFetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    fetchData();
+  }, [sessionData, status]);
 
   const openEditor = (article = null) => {
     if (article) {

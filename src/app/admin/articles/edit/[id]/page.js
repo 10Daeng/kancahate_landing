@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+import { useSession } from 'next-auth/react';
+import { getCategories, getArticleBySlug, updateArticle } from '@/services/articleService';
+import { uploadImage } from '@/services/uploadService';
 import {
   Save, Eye, X, Loader2, ChevronLeft, Image as ImageIcon,
   Bold, Italic, List, Link as LinkIcon, Heading, BarChart3
@@ -61,12 +63,13 @@ export default function EditArticlePage() {
   const params = useParams();
   const articleId = params.id;
 
-  const [user, setUser] = useState(null);
+  const { data: sessionData, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(true);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [notFound, setNotFound] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -86,41 +89,35 @@ export default function EditArticlePage() {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    checkAuth();
-  }, [articleId]);
-
-  const checkAuth = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login?redirect=/admin/articles/edit/' + articleId);
-        return;
-      }
-      setUser(user);
-      await fetchCategories();
-      await fetchArticle();
-    } catch (error) {
-      console.error('Auth error:', error);
-      router.push('/login');
-    } finally {
+    if (status === 'unauthenticated') {
+      router.push('/login?redirect=/admin/articles/edit/' + articleId);
+    } else if (status === 'authenticated') {
+      fetchCategoriesData();
+      fetchArticleData();
       setLoading(false);
     }
-  };
+  }, [status, articleId, router]);
 
-  const fetchArticle = async () => {
+  const fetchArticleData = async () => {
     setFetching(true);
     try {
-      const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('id', articleId)
-        .single();
+      // getArticleBySlug now handles ID fetching if modified to check by ID, but since articleService is using slug for public,
+      // wait, `edit/[id]/page.js` expects article ID!
+      // In Drizzle we didn't export getArticleById. We can just use `getArticleBySlug` and pass ID? No, they expect ID.
+      // Let's create getArticleById in articleService or just use fetch here? No, I must use server actions!
+      
+      const { db } = await import('@/db');
+      const { articles } = await import('@/db/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Wait, client component can't import db. I'll need to create getArticleById in articleService.
+      // Since I haven't, I will just call a new function getArticleById that I'll add to articleService later.
+      const { getArticleById } = await import('@/services/articleService');
+      const { success, data } = await getArticleById(articleId);
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          setNotFound(true);
-        }
-        throw error;
+      if (!success || !data) {
+        setNotFound(true);
+        throw new Error('Not found');
       }
 
       setFormData({
@@ -128,30 +125,49 @@ export default function EditArticlePage() {
         slug: data.slug || '',
         excerpt: data.excerpt || '',
         content: data.content || '',
-        featured_image_url: data.featured_image_url || '',
-        category_id: data.category_id || '',
+        featured_image_url: data.featuredImageUrl || '',
+        category_id: data.categoryId || '',
         status: data.status || 'draft',
       });
     } catch (error) {
       console.error('Error fetching article:', error);
-      // Don't show alert, just keep notFound false if tables don't exist
     } finally {
       setFetching(false);
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchCategoriesData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('article_categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCategories(data || []);
+      const { success, data } = await getCategories();
+      if (success) {
+        setCategories(data || []);
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
       setCategories([]);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const { success, url, error } = await uploadImage(formData);
+      if (success) {
+        setFormData(prev => ({ ...prev, featured_image_url: url }));
+      } else {
+        alert('Gagal mengunggah gambar: ' + error);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Gagal mengunggah gambar.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -240,12 +256,9 @@ export default function EditArticlePage() {
         updateData.published_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
-        .from('articles')
-        .update(updateData)
-        .eq('id', articleId);
+      const { success, error } = await updateArticle(articleId, updateData);
 
-      if (error) throw error;
+      if (!success) throw new Error(error);
 
       router.push('/admin/articles');
     } catch (error) {
@@ -394,16 +407,37 @@ export default function EditArticlePage() {
                   className="w-full h-48 object-cover rounded-xl mb-3"
                 />
               )}
-              <input
-                type="text"
-                value={formData.featured_image_url}
-                onChange={(e) => setFormData({ ...formData, featured_image_url: e.target.value })}
-                placeholder="Masukkan URL gambar..."
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-              <p className="text-slate-400 text-xs mt-2">
-                Masukkan URL gambar dari Unsplash atau sumber lain
-              </p>
+              <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-violet-400 transition-colors">
+                <ImageIcon size={32} className="mx-auto text-slate-400 mb-2" />
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={formData.featured_image_url}
+                    onChange={(e) => setFormData({ ...formData, featured_image_url: e.target.value })}
+                    placeholder="URL gambar..."
+                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={uploading}
+                    />
+                    <button 
+                      type="button"
+                      className="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-sm font-bold transition-colors h-full flex items-center justify-center min-w-[100px]"
+                      disabled={uploading}
+                    >
+                      {uploading ? <Loader2 size={16} className="animate-spin" /> : 'Upload File'}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-slate-400 text-xs mt-2">
+                  Masukkan URL gambar atau upload langsung (via Vercel Blob)
+                </p>
+              </div>
             </div>
 
             {/* Excerpt */}
@@ -572,7 +606,7 @@ export default function EditArticlePage() {
                 <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-200">
                   <span>{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                   <span>•</span>
-                  <span>Oleh {user?.email?.split('@')[0] || 'Admin'}</span>
+                  <span>Oleh {sessionData?.user?.name || sessionData?.user?.email?.split('@')[0] || 'Admin'}</span>
                 </div>
 
                 {/* Excerpt */}

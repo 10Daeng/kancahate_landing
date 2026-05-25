@@ -1,10 +1,9 @@
-import { defineConfig } from 'drizzle-kit';
-
-export default defineConfig({
-  schema: './src/lib/schema.js',
-  out: './drizzle',
-  dialect: 'postgresql',
+/** @type { import("drizzle-kit").Config } */
+export default {
+  schema: "./src/db/schema.js",
+  out: "./drizzle",
+  dialect: "postgresql",
   dbCredentials: {
-    url: process.env.NEXT_PUBLIC_NEON_DATABASE_URL
-  },
-});
+    url: process.env.DATABASE_URL || "postgresql://dummy:dummy@dummy/dummy",
+  }
+};

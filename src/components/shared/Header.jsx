@@ -3,149 +3,192 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { Menu, X, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Menu, X, Shield, Sparkles } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export default function Header({ actionButtonHandler }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const { data: session, status } = useSession();
+  const user = session?.user || null;
+  const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { supabase } = await import('@/lib/supabaseClient');
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-    };
-    checkUser();
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const navLinks = [
+    { href: '/', label: 'Beranda' },
+    { href: '/psikotes', label: 'Tes Seru ✨' },
+    { href: '/ruang-baca', label: 'Ruang Baca' },
+    { href: '/laporan-kejadian', label: 'Lapor', isRed: true, icon: Shield },
+    { href: '/#crisis', label: 'Bantuan' },
+  ];
+
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-100">
+    <header
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'glass border-b border-white/40 shadow-lg shadow-violet-500/5'
+          : 'bg-white/80 backdrop-blur-md border-b border-slate-100/50'
+      }`}
+    >
       <div className="max-w-6xl mx-auto px-4 lg:px-10 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity shrink-0">
-          <Image
-            src="/logo.png"
-            alt="Kancah Ate Logo"
-            width={40}
-            height={40}
-            className="object-contain"
-            priority
-          />
-          <span className="text-lg font-bold text-slate-800 hidden sm:block">Kancah Ate</span>
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-all group shrink-0">
+          <div className="relative">
+            <Image
+              src="/logo.png"
+              alt="Kancah Ate Logo"
+              width={38}
+              height={38}
+              className="object-contain group-hover:scale-105 transition-transform"
+              priority
+            />
+          </div>
+          <span className="text-lg font-extrabold text-slate-800 hidden sm:block tracking-tight">
+            Kancah <span className="gradient-text">Ate</span>
+          </span>
         </Link>
 
         {/* Desktop Nav */}
         <nav className="hidden lg:flex items-center gap-1">
-          <Link href="/" className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-all">Beranda</Link>
-          <Link href="/psikotes" className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-all">Tes Seru</Link>
-          <Link href="/ruang-baca" className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-all">Ruang Baca</Link>
-          <Link href="/laporan-kejadian" className="px-3 py-2 text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all flex items-center gap-1.5">
-            <Shield size={14} />
-            Lapor
-          </Link>
-          <Link href="/#crisis" className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-all">Bantuan</Link>
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            const IconComp = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`relative px-3.5 py-2 text-sm font-semibold rounded-xl transition-all duration-200 flex items-center gap-1.5 ${
+                  link.isRed
+                    ? 'text-rose-600 hover:bg-rose-50 hover:text-rose-700'
+                    : isActive
+                    ? 'text-violet-700 bg-violet-50'
+                    : 'text-slate-600 hover:text-violet-700 hover:bg-violet-50/80'
+                }`}
+              >
+                {IconComp && <IconComp size={13} />}
+                {link.label}
+                {isActive && !link.isRed && (
+                  <motion.div
+                    layoutId="nav-pill"
+                    className="absolute inset-0 bg-violet-100 rounded-xl -z-10"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2">
           {user ? (
-            <Link href={user.email?.includes('lenterabatin') ? "/kancah-private-auth" : "/dashboard"} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-all">
-              <div className="w-7 h-7 bg-violet-100 rounded-full flex items-center justify-center text-violet-600 text-xs font-bold">
+            <Link
+              href={user.email?.includes('lenterabatin') ? '/kancah-private-auth' : '/dashboard'}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
+            >
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
                 {user.email[0].toUpperCase()}
               </div>
               <span className="max-w-[100px] truncate">{user.email.split('@')[0]}</span>
             </Link>
           ) : (
-            <Link href="/login" className="px-4 py-2 text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors">
+            <Link
+              href="/login"
+              className="px-4 py-2 text-sm font-semibold text-violet-600 hover:text-violet-800 hover:bg-violet-50 rounded-xl transition-all"
+            >
               Masuk
             </Link>
           )}
 
           {actionButtonHandler ? (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
               onClick={actionButtonHandler}
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-all shadow-md shadow-violet-200 hover:shadow-lg hover:shadow-violet-200 hover:-translate-y-0.5"
+              className="btn-primary px-5 py-2.5 text-sm flex items-center gap-1.5"
             >
+              <Sparkles size={14} className="opacity-90" />
               Mulai Curhat
-            </button>
+            </motion.button>
           ) : (
-            <Link
-              href="/"
-              className="px-5 py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-all shadow-md shadow-violet-200 hover:shadow-lg hover:shadow-violet-200 hover:-translate-y-0.5"
-            >
+            <Link href="/" className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-1.5">
+              <Sparkles size={14} className="opacity-90" />
               Mulai Curhat
             </Link>
           )}
         </div>
 
-        {/* Mobile: hamburger only */}
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden p-2 -mr-2 text-slate-600 hover:text-violet-600 transition-colors">
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Mobile: hamburger */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="lg:hidden p-2 -mr-2 text-slate-600 hover:text-violet-600 transition-colors rounded-xl hover:bg-violet-50"
+        >
+          {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </motion.button>
       </div>
 
       {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-slate-100 animate-fade-in">
-          <div className="max-w-6xl mx-auto px-4 py-5 space-y-1">
-            {/* Lapor Banner - prominent */}
-            <Link
-              href="/laporan-kejadian"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 p-3 bg-gradient-to-r from-rose-50 to-orange-50 border border-rose-200 rounded-xl text-rose-700 font-bold mb-4"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-orange-500 rounded-lg flex items-center justify-center text-white shrink-0">
-                <Shield size={20} />
-              </div>
-              <div>
-                <span className="block text-sm">Lapor Kekerasan / Bullying</span>
-                <span className="block text-xs font-normal text-rose-500">Melapor itu berani</span>
-              </div>
-            </Link>
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+            className="lg:hidden overflow-hidden"
+          >
+            <div className="glass border-t border-white/40 px-4 py-5 space-y-2">
+              {/* Links yang tidak ada di BottomNav */}
 
-            {user ? (
-              <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl text-violet-700 font-bold mb-2">
-                <div className="w-8 h-8 bg-violet-200 rounded-full flex items-center justify-center text-violet-600 text-sm font-bold">
-                  {user.email[0].toUpperCase()}
-                </div>
-                <div>
-                  <span className="block text-sm">Halo, {user.email.split('@')[0]}</span>
-                  <span className="text-xs font-normal opacity-70">Profil & Hasil Tes</span>
-                </div>
-              </Link>
-            ) : (
-              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full text-center py-2.5 mb-2 text-sm font-semibold text-violet-600 hover:text-violet-700">
-                Masuk / Daftar
-              </Link>
-            )}
+              {/* Nav Links */}
+              <div className="space-y-1 pt-1">
+                {[
+                  { href: '/psikotes', label: 'Tes Seru ✨' },
+                  { href: '/#crisis', label: 'Bantuan Darurat 🆘', red: true },
+                ].map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block py-3 px-4 text-sm font-semibold rounded-xl transition-all ${
+                      link.red
+                        ? 'text-red-500 hover:bg-red-50'
+                        : 'text-slate-700 hover:bg-violet-50 hover:text-violet-700'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
 
-            <div className="space-y-0.5 pt-2">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="block py-2.5 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Beranda</Link>
-              <Link href="/psikotes" onClick={() => setMobileMenuOpen(false)} className="block py-2.5 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Tes Seru</Link>
-              <Link href="/ruang-baca" onClick={() => setMobileMenuOpen(false)} className="block py-2.5 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg">Ruang Baca</Link>
-              <Link href="/#crisis" onClick={() => setMobileMenuOpen(false)} className="block py-2.5 px-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-lg">Bantuan Darurat</Link>
+              {/* Mobile CTA */}
+              {actionButtonHandler ? (
+                <button
+                  onClick={() => { setMobileMenuOpen(false); actionButtonHandler(); }}
+                  className="btn-primary w-full mt-2 py-3.5 text-sm font-bold flex items-center justify-center gap-2"
+                >
+                  <Sparkles size={16} />
+                  Mulai Curhat Sekarang
+                </button>
+              ) : (
+                <Link href="/" onClick={() => setMobileMenuOpen(false)}
+                  className="btn-primary block w-full text-center mt-2 py-3.5 text-sm font-bold">
+                  Mulai Curhat Sekarang
+                </Link>
+              )}
             </div>
-
-            {/* Mobile CTA */}
-            {actionButtonHandler ? (
-              <button
-                onClick={() => { setMobileMenuOpen(false); actionButtonHandler(); }}
-                className="w-full mt-4 py-3 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors shadow-md shadow-violet-200"
-              >
-                Mulai Curhat
-              </button>
-            ) : (
-              <Link
-                href="/"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center mt-4 py-3 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl transition-colors shadow-md shadow-violet-200"
-              >
-                Mulai Curhat
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

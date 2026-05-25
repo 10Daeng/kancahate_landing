@@ -83,7 +83,8 @@ const createSessionTimeout = (onWarning, onTimeout) => {
   return { reset, clear };
 };
 
-import { supabase } from '../../lib/supabaseClient';
+import { useSession } from 'next-auth/react';
+import { getChatDraft, saveChatDraft, deleteChatDraft, getUserProfile } from '../../services/analyticsService';
 import { callGeminiAPI, validateAnswer } from '../../services/geminiService';
 import { ragPipeline, detectCrisis as ragDetectCrisis } from '../../services/ragService';
 import { createOrUpdateUser, createSession, updateSession } from '../../services/analyticsService';
@@ -96,23 +97,12 @@ import GroundingCard from './widgets/GroundingCard';
 const INTAKE_FLOW = [
   {
     id: 'name',
-    text: "Halo! Kenalin aku Kai, teman ceritamu di sini. Agar kita lebih akrab, boleh tahu siapa nama panggilanmu?",
+    text: "Biar lebih akrab, boleh tahu siapa nama panggilanmu?",
     type: 'text'
   },
   {
-    id: 'gender',
-    text: "Salam kenal! Boleh tahu apa jenis kelaminmu?",
-    type: 'option',
-    options: ["Laki-laki", "Perempuan", "Tidak ingin menjawab"]
-  },
-  {
-    id: 'dob',
-    text: "Boleh tahu kapan tanggal lahirmu? (Biar Kai bisa hitung usiamu dengan tepat)",
-    type: 'date'
-  },
-  {
     id: 'education_status',
-    text: "Apa status pendidikan kamu saat ini?",
+    text: "Salam kenal! Apa status pendidikan kamu saat ini?",
     type: 'option',
     options: [
       "Pelajar SD/SMP/SMA",
@@ -120,55 +110,6 @@ const INTAKE_FLOW = [
       "Sudah Bekerja",
       "Sedang Mencari Kerja",
       "Lulus/Sudah Tidak Sekolah"
-    ]
-  },
-  {
-    id: 'institution_type',
-    text: "Kamu di institusi Negeri atau Swasta?",
-    type: 'option',
-    options: ["Negeri", "Swasta"],
-    condition: (data) => data.education_status?.includes('Pelajar') || data.education_status?.includes('Mahasiswa')
-  },
-  {
-    id: 'occupation',
-    text: "Boleh ceritakan pekerjaanmu saat ini?",
-    type: 'text',
-    condition: (data) => data.education_status?.includes('Bekerja') || data.education_status?.includes('Lulus')
-  },
-  {
-    id: 'location',
-    text: "Di kota atau kabupaten mana kamu tinggal sekarang?",
-    type: 'option',
-    options: [
-      "Madura (Sumenep)",
-      "Madura (Pamekasan)",
-      "Madura (Sampang)",
-      "Madura (Bangkalan)",
-      "Surabaya",
-      "Jakarta",
-      "Bandung",
-      "Semarang",
-      "Yogyakarta",
-      "Malang",
-      "Lainnya"
-    ]
-  },
-  {
-    id: 'location_custom',
-    text: "Silakan tuliskan nama kotamu:",
-    type: 'text',
-    condition: (data) => data.location === 'Lainnya'
-  },
-  {
-    id: 'language_preference',
-    text: "Bahasa apa yang kamu nyaman pakai untuk ngobrol?",
-    type: 'option',
-    options: [
-      "Bahasa Indonesia",
-      "Bahasa Indonesia + Madura",
-      "Bahasa Indonesia + Jawa",
-      "Bahasa Indonesia + Inggris",
-      "Bahasa Indonesia saja"
     ]
   }
 ];
@@ -398,10 +339,10 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
   });
   
   const [messages, setMessages] = useState([
-    { role: 'model', parts: [{ text: INTAKE_FLOW[0].text }] }
+    { role: 'model', parts: [{ text: "Halo! Kenalin aku Kai 👋\n\nSebelum kita ngobrol, apa yang lagi kamu rasain sekarang?" }] }
   ]);
   
-  const [phase, setPhase] = useState('intake');
+  const [phase, setPhase] = useState('initial_hook');
   const [intakeIndex, setIntakeIndex] = useState(0);
   const [userData, setUserData] = useState(initialData || {});
 
@@ -417,7 +358,9 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
     return id;
   });
   const [selectedPersona, setSelectedPersona] = useState(null);
-  const [loggedInUser, setLoggedInUser] = useState(null); // NEW: Track logged-in user
+  const [loggedInUser, setLoggedInUser] = useState(null); // Track logged-in user
+
+  const { data: sessionData, status } = useSession();
 
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -425,6 +368,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
+  const sessionStartTimeRef = useRef(new Date());
   
   // Crisis Detection State
   const [showCrisisModal, setShowCrisisModal] = useState(false);
@@ -448,26 +392,87 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
   const [isListening, setIsListening] = useState(false);
   const [isTTSEnabled, setIsTTSEnabled] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+
+  // Gen Z UX Features
+  const [isNightMode, setIsNightMode] = useState(false);
+  const [isTypingSoundEnabled, setIsTypingSoundEnabled] = useState(true);
+  const [finalQuote, setFinalQuote] = useState("");
+  const audioContextRef = useRef(null);
+  const nextNoteTimeRef = useRef(0);
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
 
-  // NEW: Check Supabase session on mount and fetch profile
+  //  // Gen Z UX: Auto Night Mode
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour >= 21 || hour < 6) {
+      setIsNightMode(true);
+    }
+  }, []);
+
+  // Gen Z UX: Typing Sound Effect (Web Audio API)
+  const playTypingSound = () => {
+    if (!isTypingSoundEnabled) return;
+    
+    if (!audioContextRef.current) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      audioContextRef.current = new AudioContext();
+    }
+    
+    const ctx = audioContextRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
+    
+    const now = ctx.currentTime;
+    if (now < nextNoteTimeRef.current) return;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    // Random frequency for mechanical keyboard feel
+    osc.frequency.value = 800 + Math.random() * 400; 
+    
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.05);
+    
+    // Schedule next note randomly between 50-150ms
+    nextNoteTimeRef.current = now + 0.05 + Math.random() * 0.1;
+  };
+
+  useEffect(() => {
+    let animationFrame;
+    const playLoop = () => {
+      if (isTyping) playTypingSound();
+      animationFrame = requestAnimationFrame(playLoop);
+    };
+    if (isTyping && isTypingSoundEnabled) {
+      animationFrame = requestAnimationFrame(playLoop);
+    }
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isTyping, isTypingSoundEnabled]);
+
+  // Check for logged-in user and existing profile
   useEffect(() => {
     const checkSession = async () => {
+      if (status === 'loading') return;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = sessionData?.user;
         if (user) {
           setLoggedInUser(user);
           console.log('[Auth] User already logged in:', user.email);
           
           // Fetch user profile from database
-          const { data: profile, error } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
+          const { success, data: profile, error } = await getUserProfile();
           
-          if (profile && !error) {
+          if (success && profile) {
             console.log('[Profile] User profile found, skipping intake');
             
             // Pre-fill userData from profile
@@ -478,11 +483,11 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
               gender: profile.gender,
               dob: profile.dob,
               age: profile.age,
-              education_status: profile.education_status,
-              institution_type: profile.institution_type,
+              education_status: profile.educationStatus || profile.education_status,
+              institution_type: profile.institutionType || profile.institution_type,
               occupation: profile.occupation,
               location: profile.location,
-              location_custom: profile.location_custom
+              location_custom: profile.locationCustom || profile.location_custom
             }));
             
             // Skip intake phase, go directly to subtopic selection
@@ -616,18 +621,9 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
   useEffect(() => {
     const recoverSession = async () => {
       try {
-        if (!supabase) {
-          recoverFromLocalStorage();
-          return;
-        }
+        const { success, data } = await getChatDraft(sessionId);
         
-        const { data, error } = await supabase
-          .from('counseling_sessions_drafts')
-          .select('*')
-          .eq('session_id', sessionId)
-          .single();
-        
-        if (error || !data) {
+        if (!success || !data) {
           recoverFromLocalStorage();
         } else {
           console.log('Session recovered from database:', sessionId);
@@ -696,16 +692,10 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
         console.warn('LocalStorage save failed:', err);
       }
       
-      if (supabase) {
-        supabase
-          .from('counseling_sessions_drafts')
-          .upsert(draft, { onConflict: 'session_id' })
-          .then(({ error }) => {
-             if (error) console.error('Supabase auto-save error:', error);
-             else console.log('Draft auto-saved to Supabase:', sessionId);
-          })
-          .catch(err => console.error('Supabase network error:', err));
-      }
+      saveChatDraft(sessionId, draft).then(({ success, error }) => {
+        if (!success) console.error('Failed to auto-save draft to server:', error);
+        else console.log('Draft auto-saved to server:', sessionId);
+      });
     };
     
     saveDraft();
@@ -960,9 +950,18 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
     }, 800);
   };
 
-  const finishSession = () => {
+  const finishSession = async () => {
     setPhase('finished');
     addBotMessage("Terima kasih sudah bercerita! Ceritamu sudah kami simpan dengan aman. Tetap semangat ya, kamu tidak sendirian! 💪");
+    
+    // Generate AI Quote
+    try {
+      const quotePrompt = `Berdasarkan curhatan user bernama ${userData.name || 'kawan'} tentang topik ${category.title}, buatkan SATU kalimat penyemangat/quote singkat yang hangat dan inspiratif. Jangan pakai tanda kutip atau emoji berlebihan.`;
+      const quote = await callGeminiAPI(messages, quotePrompt, 1, userData.name);
+      setFinalQuote(quote);
+    } catch (e) {
+      setFinalQuote("Kamu hebat sudah berani cerita hari ini. Langkah kecilmu sangat berarti!");
+    }
   };
 
   // Handler untuk tombol "Selesai Bercerita"
@@ -979,7 +978,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
         if (dbUserId) {
           // Step 2: Create session record
           const userMessageCount = messages.filter(m => m.role === 'user').length;
-          const startedAt = new Date(Date.now() - (Math.floor(Math.random() * 1800000) + 300000)); // Random 5-35 min ago
+          const startedAt = sessionStartTimeRef.current;
 
           const sessionData = await createSession({
             userId: dbUserId,
@@ -1019,7 +1018,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
         // Cleanup draft
         localStorage.removeItem(`kancahate_draft_${sessionId}`);
         localStorage.removeItem('kancahate_session_id');
-        await supabase.from('counseling_sessions_drafts').delete().eq('session_id', sessionId);
+        await deleteChatDraft(sessionId);
       }
     } catch (err) {
       console.error('Error saving session:', err);
@@ -1068,20 +1067,10 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
 
     setIsTyping(true);
     try {
-      // Update email di database
-      await supabase
-        .from('counseling_sessions')
-        .update({ user_email: accountEmail })
-        .eq('user_name', userData.name)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      // Kirim magic link
-      const { error } = await supabase.auth.signInWithOtp({
-        email: accountEmail,
-        options: { emailRedirectTo: window.location.origin }
-      });
-
+      // TODO: Update email di db. Belum didukung Drizzle action langsung di sini.
+      // Kirim magic link NextAuth tidak didukung default OTP
+      const error = new Error("Magic Link is not configured in NextAuth yet.");
+      
       if (error) throw error;
 
       setIsTyping(false);
@@ -1167,8 +1156,24 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
     const newMessages = [...messages, { role: 'user', parts: [{ text: textToSend }] }];
     setMessages(newMessages);
     setInput('');
+    setActiveWidget(null);
+    setWidgetData(null);
 
-    // Crisis Detection - Using RAG Service for enhanced detection
+    // PHASE 0: INITIAL HOOK
+    if (phase === 'initial_hook') {
+      setUserData(prev => ({ ...prev, initialHook: textToSend }));
+      setPhase('intake');
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const nameQ = INTAKE_FLOW[0].text;
+        setMessages(prev => [...prev, { role: 'model', parts: [{ text: nameQ }] }]);
+        speakText(nameQ);
+      }, 1000);
+      return;
+    }
+
+    // PHASE 1: INTAKEG Service for enhanced detection
     const ragCrisisCheck = ragDetectCrisis(textToSend);
     const crisisCheck = ragCrisisCheck.isCrisis ? {
       level: ragCrisisCheck.level,
@@ -1268,28 +1273,20 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
         const updatedDataWithPersona = { ...updatedData, persona: autoPersona.id };
         setUserData(updatedDataWithPersona);
 
-        setPhase('mood_check'); // Temporary phase before subtopic
+        setPhase('subtopic');
         setIntakeIndex(0);
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
           
-          const moodQ = `Terima kasih datanya, ${updatedData.name}! ✨ Sebelum kita lanjut, gimana perasaanmu saat ini?`;
+          const topicQ = `Terima kasih datanya, ${updatedData.name || 'teman'}! ✨ Nah, hari ini kamu mau ngobrolin tentang apa? Pilih salah satu topik di bawah atau ketik sendiri ya.`;
           
           setMessages(prev => [...prev, {
             role: 'model',
-            parts: [{ text: moodQ }]
+            parts: [{ text: topicQ }]
           }]);
           
-          // TTS for accessibility
-          speakText(moodQ);
-          
-          // Trigger Mood Widget
-          setTimeout(() => {
-            setActiveWidget('mood');
-            setWidgetData({ question: "Bagaimana perasaanmu saat ini?" });
-          }, 500);
-          
+          speakText(topicQ);
         }, 1500);
       } else {
         addBotMessage(INTAKE_FLOW[nextIndex].text);
@@ -1373,7 +1370,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
       const containsEndSignal = endSignals.some(signal => lowerText.includes(signal));
 
       // Jika respons pendek + mengandung signal akhir + sudah cukup banyak pesan
-      if (isShortResponse && containsEndSignal && messages.length >= 10) {
+      if (isShortResponse && containsEndSignal && messages.length >= 8) {
         // User ingin mengakhiri - langsung end session
         handleEndChatSession();
         return;
@@ -1457,7 +1454,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
       }
 
       // Update phase ke free_chat setelah beberapa pesan
-      if (phase === 'deepening' && messages.length >= 6) {
+      if (phase === 'deepening' && messages.length >= 8) {
         setPhase('free_chat');
       }
     }
@@ -1651,9 +1648,57 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
     
     return (
       <div className="flex flex-col gap-2 w-full">
+        
+        {/* Gen Z UX: Quick Starters */}
+        {phase === 'initial_hook' && (
+          <div className="flex flex-wrap gap-2 mb-2 items-center justify-center">
+            {["Aku lagi sedih 😢", "Aku stres belajar 📚", "Aku butuh teman cerita 💬"].map((starter) => (
+              <button 
+                key={starter}
+                onClick={() => handleSendMessage(starter)}
+                className="bg-violet-50 text-violet-600 px-4 py-2.5 rounded-full text-xs font-semibold hover:bg-violet-100 hover:scale-105 transition-all border border-violet-100 shadow-sm"
+              >
+                {starter}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Gen Z UX: AI Share Quote */}
+        {phase === 'finished' && finalQuote && (
+          <div className={`w-full p-4 rounded-xl border ${isNightMode ? 'bg-indigo-900/30 border-indigo-800' : 'bg-indigo-50 border-indigo-100'} text-center mt-2`}>
+            <p className={`text-sm italic font-medium mb-3 ${isNightMode ? 'text-indigo-200' : 'text-indigo-800'}`}>"{finalQuote}"</p>
+            <button 
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Pesan dari Kai',
+                    text: `"${finalQuote}" - Kai (Kancah Ate)`,
+                  }).catch(console.error);
+                } else {
+                  alert('Fitur share tidak didukung di browser ini.');
+                }
+              }}
+              className="mx-auto bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-sm"
+            >
+              Bagikan Pesan Kai
+            </button>
+          </div>
+        )}
+
         {/* Accessibility Controls */}
-        {speechSupported && (
-          <div className="flex items-center justify-end gap-2 mb-1">
+        <div className="flex items-center justify-end gap-2 mb-1">
+          {/* Gen Z UX: Sound Effect Toggle */}
+          <button
+            onClick={() => setIsTypingSoundEnabled(!isTypingSoundEnabled)}
+            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${isTypingSoundEnabled ? 'bg-violet-100 text-violet-600' : 'bg-slate-100 text-slate-500'}`}
+            title={isTypingSoundEnabled ? "Matikan suara ketikan" : "Aktifkan suara ketikan"}
+          >
+            {isTypingSoundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            <span>SFX {isTypingSoundEnabled ? 'Aktif' : 'Mati'}</span>
+          </button>
+          
+          {speechSupported && (
             <button
               onClick={() => setIsTTSEnabled(!isTTSEnabled)}
               className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${isTTSEnabled ? 'bg-violet-100 text-violet-600' : 'bg-slate-100 text-slate-500'}`}
@@ -1662,8 +1707,8 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
               {isTTSEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
               <span>Suara {isTTSEnabled ? 'Aktif' : 'Mati'}</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
         
         <div className="flex gap-2 w-full">
           {/* Microphone Button for STT */}
@@ -1720,7 +1765,7 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 h-[85vh] flex flex-col">
+    <div className={`max-w-2xl mx-auto px-4 py-6 h-[85vh] flex flex-col ${isNightMode ? 'bg-slate-900 text-slate-200 rounded-[2rem]' : ''}`}>
       {/* Crisis Modal */}
       <CrisisModal 
         isOpen={showCrisisModal} 
@@ -1729,20 +1774,26 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
         userName={userData.name}
       />
       
-      <div className="bg-white border-b p-4 flex items-center justify-between rounded-t-[2rem] shadow-sm">
+      <div className={`border-b p-4 flex items-center justify-between rounded-t-[2rem] shadow-sm ${isNightMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 bg-slate-50 rounded-full hover:bg-orange-50 transition-colors"><ArrowLeft size={20} /></button>
+          <button onClick={onBack} className={`p-2 rounded-full transition-colors ${isNightMode ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-slate-50 hover:bg-orange-50'}`}><ArrowLeft size={20} /></button>
           <motion.div 
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ repeat: Infinity, duration: 3 }}
-            className={`p-2 rounded-xl ${category.color}`}
+            className={`p-2 rounded-xl ${
+              category.color === 'violet' ? 'bg-violet-100 text-violet-600' :
+              category.color === 'rose' ? 'bg-rose-100 text-rose-600' :
+              category.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' :
+              category.color === 'amber' ? 'bg-amber-100 text-amber-600' :
+              'bg-blue-100 text-blue-600'
+            }`}
           >
             {category.icon}
           </motion.div>
           <div>
             <h4 className="font-bold text-slate-800 text-sm">Konseling: {category.title}</h4>
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${phase === 'finished' ? 'bg-green-500' : 'bg-orange-500 animate-pulse'}`}></span>
+              <span className={`w-2 h-2 rounded-full ${phase === 'finished' ? 'bg-green-500' : 'bg-violet-500 animate-pulse'}`}></span>
               <span className="text-[10px] text-slate-500 font-medium">
                 {phase === 'intake' ? 'Pendataan Awal' : phase === 'subtopic' ? 'Pilih Topik' : phase === 'deepening' ? 'Sesi Curhat' : 'Menyimpan Data'}
               </span>
@@ -1782,25 +1833,50 @@ function ChatRoomView({ category, onBack, initialData, setView }) {
           }`}
         >
         {messages.map((msg, i) => (
-          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed ${msg.role === 'user' ? 'bg-orange-500 text-white rounded-br-none' : 'bg-white text-slate-700 rounded-bl-none border border-slate-100'}`}>
+          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group relative`}>
+            <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed relative ${msg.role === 'user' ? 'bg-violet-600 text-white rounded-br-none' : isNightMode ? 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700' : 'bg-white text-slate-700 rounded-bl-none border border-slate-100'}`}>
                 <span className="text-[10px] font-bold block mb-1 opacity-50 uppercase">{msg.role === 'model' ? 'Kai' : 'User'}</span>
               {msg.parts[0].text}
+              
+              {/* Gen Z UX: Reaction Badge */}
+              {msg.reaction && msg.role === 'model' && (
+                <div className={`absolute -bottom-3 -right-2 border shadow-sm rounded-full px-2 py-0.5 text-xs z-10 ${isNightMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
+                  {msg.reaction}
+                </div>
+              )}
             </div>
+            
+            {/* Gen Z UX: Reaction Selector on Hover */}
+            {msg.role === 'model' && phase !== 'finished' && (
+              <div className={`opacity-0 group-hover:opacity-100 transition-opacity absolute top-1/2 -translate-y-1/2 -right-16 shadow-md rounded-full px-2 py-1 flex gap-1 z-10 border text-xs ${isNightMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
+                {['❤️', '😢', '💪'].map(emoji => (
+                  <button 
+                    key={emoji} 
+                    onClick={() => {
+                      setMessages(prev => prev.map((m, idx) => idx === i ? { ...m, reaction: m.reaction === emoji ? null : emoji } : m));
+                    }}
+                    className={`hover:scale-125 transition-transform ${msg.reaction === emoji ? (isNightMode ? 'bg-slate-700' : 'bg-slate-100') + ' rounded-full' : ''}`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
           </motion.div>
         ))}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-white p-3 rounded-2xl flex gap-2 items-center border border-slate-100 shadow-sm animate-pulse">
-              <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Mengetik...</span>
+            <div className="bg-white p-3 px-4 rounded-2xl flex gap-1.5 items-center border border-slate-100 shadow-sm">
+              <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce"></span>
+              <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+              <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
             </div>
           </div>
         )}
       </div>
       )}
 
-      <div className="bg-white p-4 rounded-b-[2rem] border shadow-lg z-10">
+      <div className={`p-4 rounded-b-[2rem] border shadow-lg z-10 ${isNightMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
         {renderInputArea()}
       </div>
     </div>

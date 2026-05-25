@@ -271,6 +271,18 @@ export async function updateIncidentReportStatus(reportId, status, adminNotes) {
   return result[0];
 }
 
+// =============================================
+// LEGACY AUTH MOCKS (Sisa migrasi Supabase)
+// =============================================
+
+export async function loginUser(email, password) {
+  return { success: false, error: 'Legacy auth disabled. Please use NextAuth.' };
+}
+
+export async function registerUser(email, password, name) {
+  return { success: false, error: 'Legacy auth disabled. Please use NextAuth.' };
+}
+
 // Default export
 export default {
   sql,
@@ -283,5 +295,8 @@ export default {
   saveChatSession,
   saveIncidentReport,
   getIncidentReports,
-  updateIncidentReportStatus
+  updateIncidentReportStatus,
+  loginUser,
+  registerUser
 };
+

@@ -317,15 +317,6 @@ export default function LaporanKejadianPage() {
               <p className="text-white/80 text-xs">Jujur, adil, toleran, peduli, menghormati, bertanggung jawab, bekerja sama</p>
             </div>
           </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <p className="font-bold text-sm mb-1">7 Kebiasaan Baik Anak Indonesia</p>
-              <p className="text-white/80 text-xs">Jujur, adil, toleran, peduli, menghormati, bertanggung jawab, bekerja sama</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-              <p className="font-bold text-sm mb-1">Nilai SOBAT</p>
-              <p className="text-white/80 text-xs">Setia kawan, Organisasi rapi, Bangga berprestasi, Aktif & cerdas, Tangguh</p>
-            </div>
-          </div>
         </div>
 
         {/* Progress */}

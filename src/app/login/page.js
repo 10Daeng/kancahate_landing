@@ -4,7 +4,31 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Lock, Mail, AlertTriangle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, Lock, Mail, AlertTriangle, Loader2, Sparkles, ArrowLeft } from 'lucide-react';
+import { signIn } from 'next-auth/react';
+
+// Floating emoji decoration
+function FloatingEmoji({ emoji, style }) {
+  return (
+    <motion.span
+      className="absolute text-2xl select-none pointer-events-none"
+      style={style}
+      animate={{
+        y: [0, -10, 0],
+        rotate: [-5, 5, -5],
+      }}
+      transition={{
+        duration: 4 + Math.random() * 2,
+        repeat: Infinity,
+        ease: "easeInOut",
+        delay: Math.random() * 2,
+      }}
+    >
+      {emoji}
+    </motion.span>
+  );
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,51 +48,21 @@ export default function LoginPage() {
 
     try {
       if (isLogin) {
-        // LOGIN dengan API Neon
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+        const result = await signIn('credentials', {
+          redirect: false,
+          email,
+          password
         });
-        const data = await response.json();
 
-        if (!data.success) {
-          setErrorMsg(data.error || 'Login gagal');
-          return;
-        }
-
-        // Simpan token di localStorage (untuk client-side)
-        if (data.token) {
-          localStorage.setItem('auth_token', data.token);
-        }
-
-        // Cek apakah admin
-        const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || 'kancahate.official@gmail.com,lenterabatin.id@gmail.com')
-          .split(',')
-          .map(e => e.trim().toLowerCase());
-
-        if (adminEmails.includes(email.toLowerCase())) {
-          router.push('/kancah-private-auth');
+        if (result?.error) {
+          setErrorMsg(result.error);
         } else {
           router.push('/dashboard');
         }
-
       } else {
-        // REGISTER dengan API Neon
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, name: email.split('@')[0] })
-        });
-        const data = await response.json();
-
-        if (!data.success) {
-          setErrorMsg(data.error || 'Pendaftaran gagal');
-          return;
-        }
-
-        setSuccessMsg('Pendaftaran berhasil! Silakan login.');
-        setIsLogin(true);
+        // Karena NextAuth belum memiliki sign-up via credentials di authOptions,
+        // Untuk sekarang, kita arahkan user agar login dengan Google untuk auto-register.
+        setErrorMsg('Pendaftaran via email sedang dinonaktifkan. Silakan gunakan Google Login.');
       }
     } catch (err) {
       console.error(err);
@@ -78,167 +72,342 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    await signIn('google', { callbackUrl: '/dashboard' });
+  };
+
   return (
-    <div className="relative flex min-h-screen w-full flex-row overflow-hidden bg-slate-50 text-slate-800 font-sans">
+    <div className="relative flex min-h-screen w-full overflow-hidden bg-white font-sans">
 
-      {/* Left Side: Visual/Hero (Hidden on Mobile) */}
-      <div className="relative hidden w-1/2 flex-col justify-between bg-slate-900 lg:flex overflow-hidden">
-        {/* Background Gradient */}
-        <div className="absolute inset-0 z-0 h-full w-full bg-gradient-to-br from-violet-600 to-indigo-900 opacity-90"></div>
+      {/* ===== LEFT SIDE: Illustrated/Visual Panel ===== */}
+      <div className="relative hidden w-1/2 lg:flex flex-col justify-between overflow-hidden">
+        {/* Aurora gradient background */}
+        <div className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(ellipse 80% 80% at 20% 20%, rgba(124, 58, 237, 0.8) 0%, transparent 55%),
+              radial-gradient(ellipse 70% 70% at 80% 80%, rgba(236, 72, 153, 0.7) 0%, transparent 55%),
+              radial-gradient(ellipse 60% 60% at 70% 20%, rgba(168, 85, 247, 0.5) 0%, transparent 55%),
+              #1a0533
+            `
+          }}
+        />
 
-        {/* Decorative Shapes */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-orange-500/20 rounded-full blur-3xl translate-x-1/3 translate-y-1/3"></div>
+        {/* Animated blob */}
+        <motion.div
+          className="absolute w-64 h-64 rounded-full opacity-20"
+          style={{
+            background: 'linear-gradient(135deg, #EC4899, #F97316)',
+            bottom: '10%',
+            left: '-5%',
+          }}
+          animate={{
+            borderRadius: ['60% 40% 30% 70% / 60% 30% 70% 40%', '30% 60% 70% 40% / 50% 60% 30% 60%', '60% 40% 30% 70% / 60% 30% 70% 40%'],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        />
 
-        {/* Real Photo Background - Indonesian Youth */}
-        <div className="absolute inset-0 z-10">
-          <img
-            src="https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=800&auto=format&fit=crop"
-            alt="Indonesian teenagers"
-            className="w-full h-full object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-violet-900/90 via-violet-800/60 to-indigo-900/40"></div>
-        </div>
+        {/* Floating emojis */}
+        <FloatingEmoji emoji="💜" style={{ top: '15%', right: '15%' }} />
+        <FloatingEmoji emoji="✨" style={{ top: '35%', left: '10%' }} />
+        <FloatingEmoji emoji="🫂" style={{ bottom: '30%', right: '10%' }} />
+        <FloatingEmoji emoji="💬" style={{ bottom: '15%', left: '20%' }} />
 
         {/* Content */}
-        <div className="relative z-20 flex h-full flex-col justify-between p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-between h-full p-12 text-white">
+          {/* Logo */}
           <div className="flex items-center gap-3">
-             <Image
-               src="/logo.png"
-               alt="Kancah Ate Logo"
-               width={40}
-               height={40}
-               className="object-contain"
-             />
-             <span className="font-bold text-2xl tracking-tight">Kancah Ate</span>
+            <Image src="/logo.png" alt="Kancah Ate Logo" width={40} height={40} className="object-contain" />
+            <span className="font-extrabold text-2xl tracking-tight">Kancah Ate</span>
           </div>
 
-          <div className="max-w-lg">
-            <h2 className="mb-6 text-4xl font-bold leading-tight">
-              Temukan kedamaian dan keseimbangan di setiap langkah.
+          {/* Hero text */}
+          <div className="max-w-sm">
+            <div className="text-5xl mb-6">🌙</div>
+            <h2 className="text-4xl font-black leading-tight mb-5">
+              Malam ini,
+              <br />kamu nggak perlu
+              <br />
+              <span style={{
+                background: 'linear-gradient(135deg, #C084FC, #F9A8D4)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                sendirian.
+              </span>
             </h2>
-            <p className="text-lg font-medium text-white/80 leading-relaxed">
-              Bergabunglah dengan komunitas yang mendukung pertumbuhan mental dan emosional Anda.
+            <p className="text-white/65 font-medium leading-relaxed">
+              Bergabung dan dapatkan teman cerita, tes kepribadian, dan ruang aman untuk tumbuh.
             </p>
+
+            {/* Trust badges */}
+            <div className="flex flex-col gap-2.5 mt-8">
+              {[
+                { emoji: '🔒', text: 'Privasi & keamanan data terjaga' },
+                { emoji: '✨', text: 'Gratis selamanya untuk semua fitur dasar' },
+                { emoji: '💜', text: 'Didukung oleh komunitas peduli mental health' },
+              ].map(item => (
+                <div key={item.text} className="flex items-center gap-3">
+                  <span className="text-lg">{item.emoji}</span>
+                  <span className="text-white/65 text-sm font-medium">{item.text}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 text-sm font-medium text-white/60">
+          {/* Footer links */}
+          <div className="flex items-center gap-4 text-sm font-medium text-white/40">
             <span>© 2026 Kancah Ate</span>
-            <span className="w-1 h-1 rounded-full bg-white/40"></span>
-            <Link href="/kebijakan-privasi" className="hover:text-white transition-colors">Privasi</Link>
-            <span className="w-1 h-1 rounded-full bg-white/40"></span>
-            <Link href="/syarat-ketentuan" className="hover:text-white transition-colors">Syarat & Ketentuan</Link>
+            <span className="w-1 h-1 rounded-full bg-white/30" />
+            <Link href="/kebijakan-privasi" className="hover:text-white/70 transition-colors">Privasi</Link>
+            <span className="w-1 h-1 rounded-full bg-white/30" />
+            <Link href="/syarat-ketentuan" className="hover:text-white/70 transition-colors">Syarat</Link>
           </div>
         </div>
       </div>
 
-      {/* Right Side: Form */}
-      <div className="flex w-full flex-col justify-center overflow-y-auto bg-white px-4 py-12 lg:w-1/2 lg:px-20 xl:px-32">
-        <div className="mx-auto w-full max-w-[480px] flex flex-col">
+      {/* ===== RIGHT SIDE: Form ===== */}
+      <div className="flex w-full flex-col justify-center overflow-y-auto bg-white px-5 py-12 lg:w-1/2 lg:px-16 xl:px-24">
+        <div className="mx-auto w-full max-w-[440px]">
+
+          {/* Back link */}
+          <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-violet-600 transition-colors mb-8">
+            <ArrowLeft size={15} />
+            Kembali ke Beranda
+          </Link>
 
           {/* Mobile Logo */}
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-             <Image
-               src="/logo.png"
-               alt="Kancah Ate Logo"
-               width={40}
-               height={40}
-               className="object-contain"
-             />
-             <span className="text-xl font-bold text-slate-800">Kancah Ate</span>
+          <div className="mb-6 flex items-center gap-3 lg:hidden">
+            <Image src="/logo.png" alt="Kancah Ate Logo" width={36} height={36} className="object-contain" />
+            <span className="text-xl font-extrabold text-slate-800">Kancah <span style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Ate</span></span>
           </div>
 
-          <div className="mb-8">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl mb-2">
-               {isLogin ? 'Selamat Datang Kembali' : 'Buat Akun Baru'}
-            </h1>
-            <p className="text-slate-500">
-               {isLogin ? 'Masuk untuk mengelola hasil tes dan konseling.' : 'Daftar gratis untuk mulai perjalanan kesehatan mentalmu.'}
-            </p>
+          {/* Tab switcher */}
+          <div
+            className="flex mb-8 p-1 rounded-2xl gap-1"
+            style={{ background: 'rgba(124,58,237,0.06)' }}
+          >
+            {['Masuk', 'Daftar'].map((tab, i) => (
+              <button
+                key={tab}
+                onClick={() => { setIsLogin(i === 0); setErrorMsg(''); }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200"
+                style={
+                  (i === 0) === isLogin
+                    ? {
+                        background: 'linear-gradient(135deg, #7C3AED, #A855F7)',
+                        color: 'white',
+                        boxShadow: '0 4px 16px rgba(124,58,237,0.3)',
+                      }
+                    : { color: '#64748B' }
+                }
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
-          {/* Error / Success Alerts */}
-          {errorMsg && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-600 flex items-start gap-3 border border-red-100 animate-fade-in">
-               <AlertTriangle size={20} className="shrink-0 mt-0.5" />
-               <p className="text-sm font-medium">{errorMsg}</p>
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="mb-6 p-4 rounded-xl bg-green-50 text-green-700 flex items-start gap-3 border border-green-100 animate-fade-in">
-               <p className="text-sm font-bold">{successMsg}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleAuth} className="flex flex-col gap-5">
-            <label className="flex flex-col gap-2">
-               <span className="text-sm font-bold text-slate-700">Email</span>
-               <div className="relative flex items-center">
-                  <div className="absolute left-4 text-slate-400 pointer-events-none">
-                     <Mail size={20} />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-slate-50 text-slate-800 placeholder-slate-400 font-medium focus:ring-2 focus:ring-violet-500 transition-all"
-                    placeholder="nama@email.com"
-                  />
-               </div>
-            </label>
-
-            <label className="flex flex-col gap-2">
-               <span className="text-sm font-bold text-slate-700">Kata Sandi</span>
-               <div className="relative flex items-center">
-                  <div className="absolute left-4 text-slate-400 pointer-events-none">
-                     <Lock size={20} />
-                  </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-14 pl-12 pr-12 rounded-xl border-none bg-slate-50 text-slate-800 placeholder-slate-400 font-medium focus:ring-2 focus:ring-violet-500 transition-all"
-                    placeholder="Minimal 6 karakter"
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 text-slate-400 hover:text-violet-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-               </div>
-            </label>
-
-            <button
-               type="submit"
-               disabled={loading}
-               className="mt-2 h-14 w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-lg shadow-lg shadow-violet-200 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          {/* Header */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isLogin ? 'login' : 'register'}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              className="mb-6"
             >
-               {loading ? <Loader2 className="animate-spin" /> : (isLogin ? 'Masuk Sekarang' : 'Buat Akun')}
-            </button>
+              <h1 className="text-2xl font-extrabold text-slate-900 mb-1.5">
+                {isLogin ? 'Selamat Datang Kembali 👋' : 'Buat Akun Baru ✨'}
+              </h1>
+              <p className="text-slate-500 text-sm font-medium">
+                {isLogin
+                  ? 'Lanjutkan perjalanan kesehatan mentalmu.'
+                  : 'Gratis selamanya. Mulai dalam 30 detik.'}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Alerts */}
+          <AnimatePresence>
+            {errorMsg && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mb-5 p-4 rounded-2xl flex items-start gap-3"
+                style={{ background: 'rgba(255,235,235,0.9)', border: '1px solid rgba(244,63,94,0.2)' }}
+              >
+                <AlertTriangle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+                <p className="text-sm font-semibold text-rose-600">{errorMsg}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {successMsg && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mb-5 p-4 rounded-2xl"
+                style={{ background: 'rgba(209,250,229,0.9)', border: '1px solid rgba(16,185,129,0.2)' }}
+              >
+                <p className="text-sm font-bold text-emerald-700">{successMsg}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Social Login */}
+          <motion.button
+            type="button"
+            onClick={handleGoogleLogin}
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full mb-6 rounded-2xl flex items-center justify-center gap-3 font-bold text-slate-700 transition-all"
+            style={{
+              height: '56px',
+              background: 'white',
+              border: '1.5px solid rgba(226,232,240,0.8)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Lanjutkan dengan Google
+          </motion.button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">atau dengan email</span>
+            <div className="flex-1 h-px bg-slate-100" />
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleAuth} className="flex flex-col gap-4">
+            {/* Email */}
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-bold text-slate-700">Email</span>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <Mail size={18} />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-13 pl-11 pr-4 rounded-xl text-slate-800 placeholder-slate-400 font-medium transition-all focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  style={{
+                    background: 'rgba(248,247,255,0.9)',
+                    border: '1.5px solid rgba(226,232,240,0.8)',
+                    height: '52px',
+                  }}
+                  placeholder="nama@email.com"
+                />
+              </div>
+            </label>
+
+            {/* Password */}
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-bold text-slate-700">Kata Sandi</span>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <Lock size={18} />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-12 rounded-xl text-slate-800 placeholder-slate-400 font-medium transition-all focus:outline-none focus:ring-2 focus:ring-violet-400"
+                  style={{
+                    background: 'rgba(248,247,255,0.9)',
+                    border: '1.5px solid rgba(226,232,240,0.8)',
+                    height: '52px',
+                  }}
+                  placeholder="Minimal 6 karakter"
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-violet-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </label>
+
+            {isLogin && (
+              <div className="text-right -mt-1">
+                <Link href="/lupa-password" className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors">
+                  Lupa kata sandi?
+                </Link>
+              </div>
+            )}
+
+            {/* Submit */}
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileHover={!loading ? { scale: 1.02, y: -1 } : {}}
+              whileTap={!loading ? { scale: 0.98 } : {}}
+              className="mt-2 w-full rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
+              style={{
+                height: '56px',
+                background: loading ? '#A855F7' : 'linear-gradient(135deg, #7C3AED, #A855F7, #EC4899)',
+                boxShadow: loading ? 'none' : '0 6px 24px rgba(124,58,237,0.35)',
+                backgroundSize: '200% 100%',
+              }}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Memproses...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  {isLogin ? 'Masuk Sekarang' : 'Buat Akun Gratis'}
+                </>
+              )}
+            </motion.button>
           </form>
 
-          <div className="mt-8 text-center text-sm font-medium text-slate-500">
-            {isLogin ? 'Belum punya akun? ' : 'Sudah punya akun? '}
-            <button
-               onClick={() => { setIsLogin(!isLogin); setErrorMsg(''); }}
-               className="font-bold text-orange-500 hover:text-orange-600 hover:underline transition-colors"
-            >
-               {isLogin ? 'Daftar Sekarang' : 'Masuk di sini'}
-            </button>
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-slate-100" />
+            <span className="text-xs text-slate-400 font-medium">atau</span>
+            <div className="flex-1 h-px bg-slate-100" />
           </div>
 
-          <div className="mt-8 text-center">
-             <Link href="/" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">
-                ← Kembali ke Beranda
-             </Link>
-          </div>
+          {/* Anonymous option */}
+          <Link
+            href="/"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold text-slate-600 transition-all hover:-translate-y-0.5"
+            style={{
+              background: 'rgba(248,247,255,0.9)',
+              border: '1.5px solid rgba(226,232,240,0.8)',
+            }}
+          >
+            🎭 Lanjut Tanpa Akun (Anonim)
+          </Link>
 
+          <p className="mt-5 text-center text-xs text-slate-400 font-medium leading-relaxed">
+            Dengan mendaftar, kamu menyetujui{' '}
+            <Link href="/syarat-ketentuan" className="text-violet-600 hover:underline font-semibold">Syarat & Ketentuan</Link>
+            {' '}dan{' '}
+            <Link href="/kebijakan-privasi" className="text-violet-600 hover:underline font-semibold">Kebijakan Privasi</Link> kami.
+          </p>
         </div>
       </div>
     </div>

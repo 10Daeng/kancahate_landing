@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabaseClient';
+import { useSession } from 'next-auth/react';
+import { getCategories, createArticle } from '@/services/articleService';
+import { uploadImage } from '@/services/uploadService';
 import {
   Save, Eye, X, Loader2, ChevronLeft, Image as ImageIcon,
   Bold, Italic, List, Link as LinkIcon, Heading, BarChart3
@@ -58,10 +60,11 @@ const Toolbar = ({ onAction }) => (
 
 export default function NewArticlePage() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { data: sessionData, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -81,38 +84,46 @@ export default function NewArticlePage() {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login?redirect=/admin/articles/new');
-        return;
-      }
-      setUser(user);
-      await fetchCategories();
-    } catch (error) {
-      console.error('Auth error:', error);
-      router.push('/login');
-    } finally {
+    if (status === 'unauthenticated') {
+      router.push('/login?redirect=/admin/articles/new');
+    } else if (status === 'authenticated') {
+      fetchCategoriesData();
       setLoading(false);
     }
-  };
+  }, [status, router]);
 
-  const fetchCategories = async () => {
+  const fetchCategoriesData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('article_categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCategories(data || []);
+      const { success, data } = await getCategories();
+      if (success) {
+        setCategories(data || []);
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
       setCategories([]);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const { success, url, error } = await uploadImage(formData);
+      if (success) {
+        setFormData(prev => ({ ...prev, featured_image_url: url }));
+      } else {
+        alert('Gagal mengunggah gambar: ' + error);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Gagal mengunggah gambar.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -206,33 +217,18 @@ export default function NewArticlePage() {
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Generate slug if not set
-      const slug = formData.slug || generateSlug(formData.title);
-
-      // Make slug unique
-      const uniqueSlug = slug + '-' + Date.now().toString(36);
-
       const articleData = {
         title: formData.title,
-        slug: uniqueSlug,
         excerpt: formData.excerpt,
         content: formData.content,
         featured_image_url: formData.featured_image_url || null,
         category_id: formData.category_id || null,
         status: publish ? 'published' : 'draft',
-        published_at: publish ? new Date().toISOString() : null,
-        author_name: user?.email?.split('@')[0] || 'Admin',
       };
 
-      const { data, error } = await supabase
-        .from('articles')
-        .insert([articleData])
-        .select()
-        .single();
+      const { success, error } = await createArticle(articleData);
 
-      if (error) throw error;
+      if (!success) throw new Error(error);
 
       router.push('/admin/articles');
     } catch (error) {
@@ -354,15 +350,33 @@ export default function NewArticlePage() {
               </label>
               <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-violet-400 transition-colors">
                 <ImageIcon size={32} className="mx-auto text-slate-400 mb-2" />
-                <input
-                  type="text"
-                  value={formData.featured_image_url}
-                  onChange={(e) => setFormData({ ...formData, featured_image_url: e.target.value })}
-                  placeholder="Masukkan URL gambar..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.featured_image_url}
+                    onChange={(e) => setFormData({ ...formData, featured_image_url: e.target.value })}
+                    placeholder="URL gambar..."
+                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      disabled={uploading}
+                    />
+                    <button 
+                      type="button"
+                      className="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-sm font-bold transition-colors h-full flex items-center justify-center min-w-[100px]"
+                      disabled={uploading}
+                    >
+                      {uploading ? <Loader2 size={16} className="animate-spin" /> : 'Upload File'}
+                    </button>
+                  </div>
+                </div>
                 <p className="text-slate-400 text-xs mt-2">
-                  Masukkan URL gambar dari Unsplash atau sumber lain
+                  Masukkan URL gambar atau upload langsung (via Vercel Blob)
                 </p>
               </div>
             </div>
@@ -553,7 +567,7 @@ Contoh format:
                 <div className="flex items-center gap-4 text-sm text-slate-500 mb-6 pb-6 border-b border-slate-200">
                   <span>{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                   <span>•</span>
-                  <span>Oleh {user?.email?.split('@')[0] || 'Admin'}</span>
+                  <span>Oleh {sessionData?.user?.name || sessionData?.user?.email?.split('@')[0] || 'Admin'}</span>
                 </div>
 
                 {/* Excerpt */}

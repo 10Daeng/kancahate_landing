@@ -1,32 +1,29 @@
-// --- ANALYTICS SERVICE (Social Proof & User Stats)
-// Mengelola data analytics untuk landing page dan dashboard
+'use server';
 
-import { supabase } from '../lib/supabaseClient';
+import { db } from '@/db';
+import * as schema from '@/db/schema';
+import { eq, desc, sql } from 'drizzle-orm';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-/**
- * Get social proof statistics untuk landing page
- * Digunakan untuk menampilkan kepercayaan publik
- * @returns {Promise<object>} - Social proof stats
- */
 export async function getSocialProof() {
   try {
-    const { data, error } = await supabase.rpc('get_social_proof');
+    // Basic implementation since we don't have the exact RPC logic
+    const totalUsers = await db.select({ count: sql`count(*)` }).from(schema.users);
+    const totalSessions = await db.select({ count: sql`count(*)` }).from(schema.counselingSessions);
+    const totalAssessments = await db.select({ count: sql`count(*)` }).from(schema.assessmentResults);
 
-    if (error) throw error;
-
-    // Format data untuk display
     return {
-      totalUsers: data.total_users || 0,
-      totalSessions: data.total_sessions || 0,
-      activeUsers7d: data.active_users_7d || 0,
-      activeUsers30d: data.active_users_30d || 0,
-      totalAssessments: data.total_assessments || 0,
-      mostPopularCategory: data.most_popular_category || 'Psikologi',
-      updatedAt: data.updated_at
+      totalUsers: Number(totalUsers[0].count) || 0,
+      totalSessions: Number(totalSessions[0].count) || 0,
+      activeUsers7d: 0, // Placeholder
+      activeUsers30d: 0, // Placeholder
+      totalAssessments: Number(totalAssessments[0].count) || 0,
+      mostPopularCategory: 'Psikologi', // Placeholder
+      updatedAt: new Date().toISOString()
     };
   } catch (error) {
     console.error('[Analytics] Error fetching social proof:', error);
-    // Return default values jika error
     return {
       totalUsers: 0,
       totalSessions: 0,
@@ -39,20 +36,16 @@ export async function getSocialProof() {
   }
 }
 
-/**
- * Get category popularity untuk display
- * @param {number} limit - Berapa banyak top kategori yang ditampilkan
- * @returns {Promise<Array>} - Array of {category, session_count, percentage}
- */
 export async function getCategoryPopularity(limit = 5) {
   try {
-    const { data, error } = await supabase
-      .from('category_popularity')
-      .select('*')
-      .order('session_count', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
+    const data = await db.select({
+      category: schema.counselingSessions.category,
+      session_count: sql`count(*)`,
+    })
+    .from(schema.counselingSessions)
+    .groupBy(schema.counselingSessions.category)
+    .orderBy(desc(sql`count(*)`))
+    .limit(limit);
 
     return data || [];
   } catch (error) {
@@ -61,17 +54,14 @@ export async function getCategoryPopularity(limit = 5) {
   }
 }
 
-/**
- * Get risk level distribution
- * @returns {Promise<Array>} - Array of {risk_level, session_count, percentage}
- */
 export async function getRiskDistribution() {
   try {
-    const { data, error } = await supabase
-      .from('risk_distribution')
-      .select('*');
-
-    if (error) throw error;
+    const data = await db.select({
+      risk_level: schema.counselingSessions.riskLevel,
+      session_count: sql`count(*)`,
+    })
+    .from(schema.counselingSessions)
+    .groupBy(schema.counselingSessions.riskLevel);
 
     return data || [];
   } catch (error) {
@@ -80,289 +70,201 @@ export async function getRiskDistribution() {
   }
 }
 
-/**
- * Create or update user record
- * Menghandle user identification (baik anonymous atau logged in)
- * @param {object} userData - User data dari intake form
- * @returns {Promise<object>} - { userId, isNewUser }
- */
 export async function createOrUpdateUser(userData) {
   try {
-    // Check if user exists (by auth_id)
-    let userId;
+    let userId = null;
     let isNewUser = false;
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
     const authId = session?.user?.id || null;
     const userEmail = session?.user?.email || userData.email || null;
 
-    // Calculate age
     const ageAtSignup = userData.dob
       ? new Date().getFullYear() - new Date(userData.dob).getFullYear()
       : null;
 
     if (authId) {
-      // User logged in - check by user_id in user_profiles
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('id, user_id')
-        .eq('user_id', authId)
-        .single();
+      const existingProfile = await db.query.userProfiles.findFirst({
+        where: eq(schema.userProfiles.userId, authId)
+      });
 
       if (existingProfile) {
-        userId = existingProfile.user_id;
-        // Update timestamp
-        await supabase
-          .from('user_profiles')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('user_id', userId);
+        userId = existingProfile.userId;
+        await db.update(schema.userProfiles)
+          .set({ updatedAt: new Date() })
+          .where(eq(schema.userProfiles.userId, userId));
       } else {
-        // Create new profile
-        const { data: newProfile, error } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: authId,
+        const newProfile = await db.insert(schema.userProfiles)
+          .values({
+            userId: authId,
             email: userEmail,
             name: userData.name || 'Anonymous',
             gender: userData.gender,
-            dob: userData.dob,
+            dob: userData.dob ? new Date(userData.dob) : null,
             age: ageAtSignup,
-            education_status: userData.education_status,
-            institution_type: userData.institution_type,
+            educationStatus: userData.education_status,
+            institutionType: userData.institution_type,
             occupation: userData.occupation,
             location: userData.location,
-            location_custom: userData.location_custom
+            locationCustom: userData.location_custom
           })
-          .select('user_id')
-          .single();
+          .returning({ userId: schema.userProfiles.userId });
 
-        if (!error && newProfile) {
-          userId = newProfile.user_id;
+        if (newProfile && newProfile.length > 0) {
+          userId = newProfile[0].userId;
           isNewUser = true;
         }
       }
     } else {
-      // Anonymous user - just return null (no profile created)
-      // Anonymous users don't get profiles
       return { userId: null, isNewUser: false };
     }
 
     return { userId, isNewUser };
   } catch (error) {
     console.error('[Analytics] Error creating/updating user:', error);
-    // Return null jika error (fallback ke old behavior)
     return { userId: null, isNewUser: false };
   }
 }
 
-/**
- * Create counseling session dengan user_id
- * @param {object} sessionData - Session data
- * @returns {Promise<object>} - Created session
- */
 export async function createSession(sessionData) {
   try {
-    const { data, error } = await supabase
-      .from('counseling_sessions')
-      .insert({
-        user_id: sessionData.userId,
+    const newSession = await db.insert(schema.counselingSessions)
+      .values({
+        userId: sessionData.userId,
         category: sessionData.category,
         subtopic: sessionData.subtopic,
-        subtopic_custom: sessionData.subtopic_custom || false,
-        persona_id: sessionData.persona_id,
-        risk_level: sessionData.risk_level,
-        risk_priority: sessionData.risk_priority || 1,
-        chat_history: sessionData.chat_history || [],
-        message_count: sessionData.message_count || 0,
-        user_message_count: sessionData.user_message_count || 0,
+        subtopicCustom: sessionData.subtopic_custom || false,
+        personaId: sessionData.persona_id,
+        riskLevel: sessionData.risk_level,
+        riskPriority: sessionData.risk_priority || 1,
+        chatHistory: sessionData.chat_history || [],
+        messageCount: sessionData.message_count || 0,
+        userMessageCount: sessionData.user_message_count || 0,
         summary: sessionData.summary || null,
-        detected_keywords: sessionData.detected_keywords || null,
-        started_at: sessionData.started_at || new Date().toISOString(),
+        detectedKeywords: sessionData.detected_keywords || null,
+        startedAt: sessionData.started_at ? new Date(sessionData.started_at) : new Date(),
         status: sessionData.status || 'In Progress',
         metadata: sessionData.metadata || {}
       })
-      .select()
-      .single();
+      .returning();
 
-    if (error) throw error;
-
-    return data;
+    return newSession[0];
   } catch (error) {
     console.error('[Analytics] Error creating session:', error);
     return null;
   }
 }
 
-/**
- * Update session saat selesai
- * @param {number} sessionId - Session ID
- * @param {object} updates - Fields to update
- * @returns {Promise<boolean>} - Success status
- */
 export async function updateSession(sessionId, updates) {
   try {
-    const { error } = await supabase
-      .from('counseling_sessions')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', sessionId);
+    // Map snake_case to camelCase
+    const mappedUpdates = {};
+    if (updates.status) mappedUpdates.status = updates.status;
+    if (updates.summary) mappedUpdates.summary = updates.summary;
+    if (updates.chat_history) mappedUpdates.chatHistory = updates.chat_history;
+    if (updates.message_count !== undefined) mappedUpdates.messageCount = updates.message_count;
+    if (updates.user_message_count !== undefined) mappedUpdates.userMessageCount = updates.user_message_count;
+    if (updates.detected_keywords) mappedUpdates.detectedKeywords = updates.detected_keywords;
+    mappedUpdates.updatedAt = new Date();
 
-    if (error) throw error;
+    const result = await db.update(schema.counselingSessions)
+      .set(mappedUpdates)
+      .where(eq(schema.counselingSessions.id, sessionId))
+      .returning();
 
-    return true;
+    return result[0];
   } catch (error) {
     console.error('[Analytics] Error updating session:', error);
-    return false;
+    return null;
   }
 }
 
-/**
- * Save assessment result
- * @param {object} assessmentData - Assessment data
- * @returns {Promise<object>} - Created assessment
- */
-export async function saveAssessmentResult(assessmentData) {
+export async function saveAssessmentResult(userId, testData) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id || null;
-
-    const { data, error } = await supabase
-      .from('assessment_results')
-      .insert({
-        user_id: userId,
-        assessment_type: assessmentData.type,
-        assessment_name: assessmentData.name,
-        score: assessmentData.score,
-        max_score: assessmentData.maxScore,
-        severity: assessmentData.severity,
-        result_data: assessmentData.resultData
+    const newAssessment = await db.insert(schema.assessmentResults)
+      .values({
+        userId: userId,
+        assessmentType: testData.assessment_type,
+        assessmentName: testData.assessment_name,
+        score: testData.score,
+        maxScore: testData.max_score,
+        severity: testData.severity,
+        resultData: testData.result_data || {}
       })
-      .select()
-      .single();
+      .returning();
 
-    if (error) throw error;
-
-    // Update assessment counter
-    await supabase.rpc('increment_metric', {
-      metric_name: 'total_assessments_taken'
-    });
-
-    return data;
+    return newAssessment[0];
   } catch (error) {
     console.error('[Analytics] Error saving assessment:', error);
     return null;
   }
 }
 
-/**
- * Get user history (untuk dashboard)
- * @param {number} userId - User ID
- * @returns {Promise<Array>} - User sessions
- */
-export async function getUserHistory(userId) {
+export async function getChatDraft(sessionId) {
   try {
-    const { data, error } = await supabase
-      .from('user_session_history')
-      .select('*')
-      .eq('user_id', userId)
-      .order('started_at', { ascending: false })
-      .limit(10);
-
-    if (error) throw error;
-
-    return data || [];
-  } catch (error) {
-    console.error('[Analytics] Error fetching user history:', error);
-    return [];
-  }
-}
-
-/**
- * Format social proof numbers untuk display
- * Contoh: 1234 -> "1.2K", 1500 -> "1.5K"
- * @param {number} num - Number to format
- * @returns {string} - Formatted number
- */
-export function formatSocialProofNumber(num) {
-  if (num < 1000) return num.toString();
-  if (num < 1000000) return (num / 1000).toFixed(1) + 'K';
-  return (num / 1000000).toFixed(1) + 'M';
-}
-
-/**
- * Get real-time social proof widget data
- * Untuk ditampilkan di landing page
- * @returns {Promise<string>} - HTML string atau formatted text
- */
-export async function getSocialProofWidget() {
-  try {
-    const stats = await getSocialProof();
-
-    // Generate random variation untuk social proof
-    const variations = [
-      `${formatSocialProofNumber(stats.totalUsers)} orang sudah curhat`,
-      `${formatSocialProofNumber(stats.totalSessions)} sesi curhat telah dilakukan`,
-      `${formatSocialProofNumber(stats.activeUsers7d)} orang aktif minggu ini`,
-      `Topik ${stats.mostPopularCategory} paling populer`
-    ];
-
-    const randomIndex = Math.floor(Math.random() * variations.length);
-
-    return {
-      text: variations[randomIndex],
-      stats: stats
-    };
-  } catch (error) {
-    console.error('[Analytics] Error generating social proof widget:', error);
-    return {
-      text: 'Bergabung dengan ribuan orang lain',
-      stats: null
-    };
-  }
-}
-
-/**
- * Track page view (untuk analytics - optional)
- * @param {string} page - Page name
- * @param {object} metadata - Additional metadata
- */
-export async function trackPageView(page, metadata = {}) {
-  try {
-    // Di production, ini bisa disimpan ke tabel page_views
-    // Untuk sekarang, kita log ke console
-    console.log(`[Analytics] Page view: ${page}`, metadata);
-  } catch (error) {
-    console.error('[Analytics] Error tracking page view:', error);
-  }
-}
-
-/**
- * Increment metric counter
- * @param {string} metricName - Metric name to increment
- */
-export async function incrementMetric(metricName) {
-  try {
-    await supabase.rpc('increment_metric', {
-      metric_name: metricName
+    const draft = await db.query.counselingSessionsDrafts.findFirst({
+      where: eq(schema.counselingSessionsDrafts.sessionId, sessionId)
     });
+    return { success: true, data: draft?.sessionData || null };
   } catch (error) {
-    console.error('[Analytics] Error incrementing metric:', error);
+    console.error('Error fetching chat draft:', error);
+    return { success: false, error: error.message };
   }
 }
 
-export default {
-  getSocialProof,
-  getCategoryPopularity,
-  getRiskDistribution,
-  createOrUpdateUser,
-  createSession,
-  updateSession,
-  saveAssessmentResult,
-  getUserHistory,
-  formatSocialProofNumber,
-  getSocialProofWidget,
-  trackPageView,
-  incrementMetric
-};
+export async function saveChatDraft(sessionId, sessionData) {
+  try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || null;
+    
+    // UPSERT logic: check if exists
+    const existing = await db.query.counselingSessionsDrafts.findFirst({
+      where: eq(schema.counselingSessionsDrafts.sessionId, sessionId)
+    });
+
+    if (existing) {
+      await db.update(schema.counselingSessionsDrafts)
+        .set({ sessionData, lastSavedAt: new Date() })
+        .where(eq(schema.counselingSessionsDrafts.sessionId, sessionId));
+    } else {
+      await db.insert(schema.counselingSessionsDrafts)
+        .values({
+          sessionId,
+          userId,
+          sessionData,
+          lastSavedAt: new Date()
+        });
+    }
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving chat draft:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteChatDraft(sessionId) {
+  try {
+    await db.delete(schema.counselingSessionsDrafts)
+      .where(eq(schema.counselingSessionsDrafts.sessionId, sessionId));
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting chat draft:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getUserProfile() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { success: false, data: null };
+    
+    const profile = await db.query.userProfiles.findFirst({
+      where: eq(schema.userProfiles.userId, session.user.id)
+    });
+    
+    return { success: true, data: profile };
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return { success: false, error: error.message };
+  }
+}

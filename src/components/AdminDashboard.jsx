@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { 
@@ -36,53 +37,40 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' or 'users'
 
-  // AUTH CHECK: Hanya izinkan email tertentu
+  const { data: sessionData, status } = useSession();
+
   useEffect(() => {
-    async function checkAdminAuth() {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-            setLoadingMsg('Sesi tidak ditemukan. Silakan login terlebih dahulu di halaman utama.');
-            return;
-        }
-
-        // Support multiple admin emails (comma-separated)
-        const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || 'lenterabatin.id@gmail.com')
-          .split(',')
-          .map(email => email.trim().toLowerCase());
-        
-        if (!adminEmails.includes(session.user.email.toLowerCase())) {
-             // Redirect unauthorized users immediately
-             router.push('/');
-             return;
-        }
-
-        setSession(session);
-        fetchSessions();
-        fetchUsers();
-    }
+    if (status === 'loading') return;
     
-    checkAdminAuth();
-  }, []);
-
-  const fetchSessions = async () => {
-    setLoading(true);
-    setLoadingMsg(''); // Clear msg jika berhasil fetch
-
-    if (!supabase) {
-      alert("Supabase client not initialized");
-      setLoading(false);
+    if (!sessionData) {
+      setLoadingMsg('Sesi tidak ditemukan. Silakan login terlebih dahulu di halaman utama.');
       return;
     }
 
-    const { data, error } = await supabase
-      .from('counseling_sessions')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || 'lenterabatin.id@gmail.com')
+      .split(',')
+      .map(email => email.trim().toLowerCase());
+    
+    if (!adminEmails.includes(sessionData.user.email.toLowerCase())) {
+         router.push('/');
+         return;
+    }
 
-    if (error) {
+    setSession(sessionData);
+    fetchSessions();
+    fetchUsers();
+  }, [sessionData, status]);
+
+  const fetchSessions = async () => {
+    setLoading(true);
+    setLoadingMsg(''); 
+
+    const { getAllSessions } = await import('@/services/adminService');
+    const { success, data, error } = await getAllSessions();
+
+    if (!success) {
       console.error("Error fetching sessions:", error);
-      alert("Gagal mengambil data: " + error.message);
+      alert("Gagal mengambil data: " + error);
     } else {
       setSessions(data || []);
     }
@@ -90,24 +78,19 @@ export default function AdminDashboard() {
   };
 
   const fetchUsers = async () => {
-    if (!supabase) return;
+    const { getAllUsers } = await import('@/services/adminService');
+    const { success, data: profiles, error } = await getAllUsers();
 
-    // Fetch user profiles
-    const { data: profiles, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
+    if (!success) {
       console.error("Error fetching users:", error);
     } else {
       // Enrich with session count
       const enrichedUsers = (profiles || []).map(user => {
-        const userSessions = sessions.filter(s => s.user_email === user.email);
+        const userSessions = sessions.filter(s => s.userEmail === user.email);
         return {
           ...user,
           session_count: userSessions.length,
-          last_session: userSessions[0]?.created_at || null
+          last_session: userSessions[0]?.createdAt || null
         };
       });
       setUsers(enrichedUsers);
