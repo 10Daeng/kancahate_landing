@@ -35,7 +35,7 @@ export const authOptions = {
         // Currently bypassing password check for simplicity if this is a prototype,
         // but YOU MUST IMPLEMENT PROPER HASHING (e.g. bcrypt) IN PRODUCTION.
         const user = await db.query.users.findFirst({
-          where: eq(users.email, credentials.email)
+          where: eq(schema.users.email, credentials.email)
         });
 
         if (user) {
