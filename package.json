@@ -24,6 +24,7 @@
     "@vercel/blob": "^2.4.0",
     "autoprefixer": "^10.4.23",
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.23.26",

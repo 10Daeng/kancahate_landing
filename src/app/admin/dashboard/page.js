@@ -155,41 +155,6 @@ export default function AdminDashboardPage() {
   const fetchStats = async () => {
     setRefreshing(true);
     try {
-      const results = await Promise.allSettled([
-        fetchUserStats(),
-        fetchArticleStats(),
-        fetchTestStats(),
-        fetchDailyActivity(),
-        fetchTopContent(),
-      ]);
-
-      // Combine all results
-      const newStats = {
-        totalUsers: 0,
-        activeUsers: 0,
-        newUsersThisMonth: 0,
-        newUsersToday: 0,
-        bannedUsers: 0,
-        totalArticles: 0,
-        publishedArticles: 0,
-        draftArticles: 0,
-        totalArticleViews: 0,
-        totalTestsTaken: 0,
-        uniqueTestTakers: 0,
-        avgTestsPerUser: 0,
-        testsThisMonth: 0,
-        riasecTests: 0,
-        mbtiTests: 0,
-        bigFiveTests: 0,
-        varkTests: 0,
-        loveLanguageTests: 0,
-        miTests: 0,
-        rimbTests: 0,
-        dailyViews: [0, 0, 0, 0, 0, 0, 0],
-        dailyTests: [0, 0, 0, 0, 0, 0, 0],
-        dailyUsers: [0, 0, 0, 0, 0, 0, 0],
-        topArticles: [],
-        topTests: [],
       const result = await getDashboardStats();
       if (result.success) {
         setStats(result.data);
