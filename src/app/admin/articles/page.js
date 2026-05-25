@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { supabase } from '@/lib/supabaseClient';
+import { getAllArticlesAdmin, deleteArticle } from '@/services/articleService';
+import { getCategories } from '@/services/categoryService';
 import {
   Plus, Edit, Trash2, Eye, Search, Filter, LogOut,
   Loader2, FileText, Calendar, Clock, AlertCircle, BarChart3
@@ -54,32 +55,22 @@ export default function AdminArticlesPage() {
 
   const fetchArticles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('articles')
-        .select(`
-          *,
-          category:article_categories(id, name, slug, color)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setArticles(data || []);
+      const result = await getAllArticlesAdmin();
+      if (!result.success) throw new Error(result.error);
+      
+      setArticles(result.data || []);
     } catch (error) {
       console.error('Error fetching articles:', error);
-      // If tables don't exist, show empty state
       setArticles([]);
     }
   };
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('article_categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCategories(data || []);
+      const result = await getCategories();
+      if (!result.success) throw new Error(result.error);
+      
+      setCategories(result.data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
       setCategories([]);
@@ -88,19 +79,15 @@ export default function AdminArticlesPage() {
 
   const handleDelete = async (id) => {
     try {
-      const { error } = await supabase
-        .from('articles')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const result = await deleteArticle(id);
+      if (!result.success) throw new Error(result.error);
 
       // Refresh list
       await fetchArticles();
       setDeleteConfirm(null);
     } catch (error) {
       console.error('Error deleting article:', error);
-      alert('Gagal menghapus artikel');
+      alert('Gagal menghapus artikel: ' + error.message);
     }
   };
 
@@ -114,7 +101,7 @@ export default function AdminArticlesPage() {
     const matchesSearch = article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || article.status === filterStatus;
-    const matchesCategory = filterCategory === 'all' || article.category_id === filterCategory;
+    const matchesCategory = filterCategory === 'all' || article.categoryId === parseInt(filterCategory);
     return matchesSearch && matchesStatus && matchesCategory;
   });
 

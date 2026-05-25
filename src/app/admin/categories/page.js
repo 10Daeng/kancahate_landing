@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { supabase } from '@/lib/supabaseClient';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '@/services/categoryService';
 import {
   Plus, Edit, Trash2, LogOut, Loader2, FolderOpen, ChevronLeft,
   AlertCircle, X, Save, BarChart3
@@ -67,13 +67,9 @@ export default function AdminCategoriesPage() {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('article_categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setCategories(data || []);
+      const result = await getCategories();
+      if (!result.success) throw new Error(result.error);
+      setCategories(result.data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
       setCategories([]);
@@ -109,29 +105,22 @@ export default function AdminCategoriesPage() {
 
       if (editingCategory) {
         // Update
-        const { error } = await supabase
-          .from('article_categories')
-          .update({
-            name: formData.name,
-            slug,
-            icon: formData.icon,
-            color: colorData.name.toLowerCase(),
-          })
-          .eq('id', editingCategory.id);
-
-        if (error) throw error;
+        const result = await updateCategory(editingCategory.id, {
+          name: formData.name,
+          slug,
+          icon: formData.icon,
+          color: colorData.name.toLowerCase(),
+        });
+        if (!result.success) throw new Error(result.error);
       } else {
         // Create
-        const { error } = await supabase
-          .from('article_categories')
-          .insert({
-            name: formData.name,
-            slug,
-            icon: formData.icon,
-            color: colorData.name.toLowerCase(),
-          });
-
-        if (error) throw error;
+        const result = await createCategory({
+          name: formData.name,
+          slug,
+          icon: formData.icon,
+          color: colorData.name.toLowerCase(),
+        });
+        if (!result.success) throw new Error(result.error);
       }
 
       // Reset form and refresh
@@ -165,23 +154,11 @@ export default function AdminCategoriesPage() {
 
   const handleDelete = async (id) => {
     try {
-      // Check if category is used by articles
-      const { data: articles } = await supabase
-        .from('articles')
-        .select('id')
-        .eq('category_id', id);
-
-      if (articles && articles.length > 0) {
-        alert('Kategori ini sedang digunakan oleh artikel. Hapus atau ubah kategori artikel terlebih dahulu.');
+      const result = await deleteCategory(id);
+      if (!result.success) {
+        alert(result.error);
         return;
       }
-
-      const { error } = await supabase
-        .from('article_categories')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
 
       await fetchCategories();
       setDeleteConfirm(null);
