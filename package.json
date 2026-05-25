@@ -12,6 +12,7 @@
     "mobile:ios": "cap open ios"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.2",
     "@capacitor/android": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
