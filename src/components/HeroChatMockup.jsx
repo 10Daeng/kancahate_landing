@@ -9,9 +9,12 @@ export default function HeroChatMockup() {
   useEffect(() => {
     // Sequence timing
     const timers = [
-      setTimeout(() => setStep(1), 800),    // User message appears
-      setTimeout(() => setStep(2), 2000),   // Kai typing appears
-      setTimeout(() => setStep(3), 4500),   // Kai message replaces typing
+      setTimeout(() => setStep(1), 500),    // User message 1
+      setTimeout(() => setStep(2), 1500),   // Kai typing 1
+      setTimeout(() => setStep(3), 3500),   // Kai message 1
+      setTimeout(() => setStep(4), 5000),   // User message 2
+      setTimeout(() => setStep(5), 6500),   // Kai typing 2
+      setTimeout(() => setStep(6), 9000),   // Kai message 2
     ];
 
     return () => timers.forEach(clearTimeout);
@@ -24,7 +27,7 @@ export default function HeroChatMockup() {
 
       <div className="flex flex-col gap-4 relative z-10" style={{ transform: 'rotateY(-5deg) rotateX(2deg)' }}>
         
-        {/* User Message */}
+        {/* User Message 1 */}
         <AnimatePresence>
           {step >= 1 && (
             <motion.div
@@ -33,60 +36,102 @@ export default function HeroChatMockup() {
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
               className="self-end max-w-[85%]"
             >
-              <div className="bg-white text-slate-800 px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-xl shadow-slate-200/50 border border-white font-medium text-[15px] leading-relaxed">
-                Hari ini rasanya capek banget, pengen nyerah aja... 😔
+              <div className="p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed relative bg-violet-600 text-white rounded-br-none">
+                <span className="text-[10px] font-bold block mb-1 opacity-50 uppercase">User</span>
+                Hari ini rasanya capek banget, tugas sekolah numpuk terus... 😔
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Kai Typing Indicator */}
+        {/* Kai Typing Indicator 1 */}
         <AnimatePresence>
           {step === 2 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8, x: -20, y: 20 }}
               animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-              className="self-start max-w-[85%] flex items-center gap-3"
+              className="self-start max-w-[85%]"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg shrink-0">
-                <span className="text-white text-xs font-bold">K</span>
-              </div>
-              <div className="bg-white/80 backdrop-blur-md px-4 py-3 rounded-2xl rounded-tl-sm shadow-xl shadow-slate-200/50 border border-white/50 flex gap-1.5 items-center h-11">
-                <motion.div
-                  className="w-2 h-2 bg-violet-400 rounded-full"
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut', delay: 0 }}
-                />
-                <motion.div
-                  className="w-2 h-2 bg-violet-400 rounded-full"
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
-                />
-                <motion.div
-                  className="w-2 h-2 bg-violet-400 rounded-full"
-                  animate={{ y: [0, -5, 0] }}
-                  transition={{ duration: 0.6, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                />
+              <div className="p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed relative bg-white text-slate-700 rounded-bl-none border border-slate-100">
+                <span className="text-[10px] font-bold block mb-1 opacity-50 uppercase">Kai</span>
+                <div className="flex gap-1.5 items-center h-5">
+                  <motion.div className="w-2 h-2 bg-slate-300 rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                  <motion.div className="w-2 h-2 bg-slate-300 rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} />
+                  <motion.div className="w-2 h-2 bg-slate-300 rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} />
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Kai Message */}
+        {/* Kai Message 1 */}
         <AnimatePresence>
           {step >= 3 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8, x: -20, y: 20 }}
               animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-              className="self-start max-w-[90%] flex items-end gap-3"
+              className="self-start max-w-[85%]"
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg shrink-0 mb-1">
-                <span className="text-white text-xs font-bold">K</span>
+              <div className="p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed relative bg-white text-slate-700 rounded-bl-none border border-slate-100">
+                <span className="text-[10px] font-bold block mb-1 opacity-50 uppercase">Kai</span>
+                Wajar banget kok merasa capek kalau tugas lagi numpuk. Udah sempat istirahat atau makan belum nih?
               </div>
-              <div className="bg-gradient-to-br from-violet-600 to-pink-500 text-white px-5 py-4 rounded-2xl rounded-bl-sm shadow-xl shadow-violet-500/20 border border-violet-400/30 text-[15px] leading-relaxed">
-                Nggak apa-apa istirahat dulu ya. Kamu udah bertahan sejauh ini dan itu keren banget. Kapan pun kamu siap cerita, aku di sini dengerin kamu 💜
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* User Message 2 */}
+        <AnimatePresence>
+          {step >= 4 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: 20, y: 20 }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="self-end max-w-[85%]"
+            >
+              <div className="p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed relative bg-violet-600 text-white rounded-br-none">
+                <span className="text-[10px] font-bold block mb-1 opacity-50 uppercase">User</span>
+                Belum, rasanya ngerasa bersalah kalau mau istirahat...
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Kai Typing Indicator 2 */}
+        <AnimatePresence>
+          {step === 5 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: -20, y: 20 }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+              className="self-start max-w-[85%]"
+            >
+              <div className="p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed relative bg-white text-slate-700 rounded-bl-none border border-slate-100">
+                <span className="text-[10px] font-bold block mb-1 opacity-50 uppercase">Kai</span>
+                <div className="flex gap-1.5 items-center h-5">
+                  <motion.div className="w-2 h-2 bg-slate-300 rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                  <motion.div className="w-2 h-2 bg-slate-300 rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} />
+                  <motion.div className="w-2 h-2 bg-slate-300 rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Kai Message 2 */}
+        <AnimatePresence>
+          {step >= 6 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: -20, y: 20 }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="self-start max-w-[85%]"
+            >
+              <div className="p-4 rounded-2xl shadow-sm text-sm whitespace-pre-line leading-relaxed relative bg-white text-slate-700 rounded-bl-none border border-slate-100">
+                <span className="text-[10px] font-bold block mb-1 opacity-50 uppercase">Kai</span>
+                Hei, istirahat itu bukan dosa lho. Kadang kita butuh jeda biar otak segar lagi. Mau tarik napas pelan-pelan bareng aku? 💜
               </div>
             </motion.div>
           )}

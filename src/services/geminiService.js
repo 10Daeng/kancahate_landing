@@ -10,7 +10,7 @@ import { sanitizeMessage, anonymizeUserData } from './cryptoService';
  * @returns {Array} - Sanitized chat history
  */
 function sanitizeChatHistory(history) {
-  return history.map(msg => {
+  let sanitized = history.map(msg => {
     if (msg.role === 'user' && msg.parts && msg.parts[0] && msg.parts[0].text) {
       return {
         ...msg,
@@ -19,6 +19,33 @@ function sanitizeChatHistory(history) {
     }
     return msg;
   });
+
+  // Gemini API STRICTLY REQUIRES the first message to be from 'user'.
+  // If the first message is from 'model', prepend a dummy user message.
+  if (sanitized.length > 0 && sanitized[0].role === 'model') {
+    sanitized.unshift({ role: 'user', parts: [{ text: 'Mulai percakapan' }] });
+  }
+
+  // Gemini also strictly requires alternating roles. Let's fix any consecutive identical roles.
+  const alternating = [];
+  for (const msg of sanitized) {
+    if (alternating.length === 0) {
+      alternating.push(msg);
+    } else {
+      const lastRole = alternating[alternating.length - 1].role;
+      if (lastRole === msg.role) {
+        // If two 'user' messages in a row, combine them or insert a dummy model message.
+        // Easiest is to insert a dummy opposite role message to keep it alternating.
+        alternating.push({ 
+          role: lastRole === 'user' ? 'model' : 'user', 
+          parts: [{ text: 'Lanjutkan' }] 
+        });
+      }
+      alternating.push(msg);
+    }
+  }
+
+  return alternating;
 }
 
 /**
