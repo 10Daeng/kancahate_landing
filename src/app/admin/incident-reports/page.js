@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { supabase } from '@/lib/supabaseClient';
 import {
   ChevronLeft, RefreshCw, Loader2, Shield, Eye, CheckCircle,
@@ -66,14 +67,18 @@ export default function IncidentReportsAdmin() {
   const [adminNotes, setAdminNotes] = useState('');
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => { checkAuth(); }, []);
+  const { data: sessionData, status } = useSession();
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    checkAuth();
+  }, [sessionData, status]);
 
   useEffect(() => { if (filterStatus !== undefined) fetchReports(); }, [filterStatus]);
 
   const checkAuth = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/kancah-private-auth'); return; }
+      if (!sessionData) { router.push('/kancah-private-auth'); return; }
     } catch { router.push('/kancah-private-auth'); }
   };
 

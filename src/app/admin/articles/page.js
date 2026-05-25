@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession, signOut } from 'next-auth/react';
 import { supabase } from '@/lib/supabaseClient';
 import {
   Plus, Edit, Trash2, Eye, Search, Filter, LogOut,
@@ -20,25 +21,27 @@ export default function AdminArticlesPage() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
+  const { data: sessionData, status } = useSession();
+
   // Check auth and fetch data
   useEffect(() => {
+    if (status === 'loading') return;
     checkAuth();
-  }, []);
+  }, [sessionData, status]);
 
   const checkAuth = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!sessionData) {
         router.push('/login?redirect=/admin/articles');
         return;
       }
 
-      // Simple admin check - in production, you'd check user role/permissions
-      const userEmail = user.email;
+      // Simple admin check
+      const userEmail = sessionData.user.email;
       const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
 
-      // For now, allow access (you can add proper admin check later)
-      setUser(user);
+      // For now, allow access
+      setUser(sessionData.user);
       await fetchArticles();
       await fetchCategories();
     } catch (error) {
@@ -102,7 +105,7 @@ export default function AdminArticlesPage() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     router.push('/login');
   };
 

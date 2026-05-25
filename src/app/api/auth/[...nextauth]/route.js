@@ -30,17 +30,29 @@ export const authOptions = {
           return null;
         }
 
-        // Add custom authentication logic here.
-        // For example, fetch user from database and compare password hash.
-        // Currently bypassing password check for simplicity if this is a prototype,
-        // but YOU MUST IMPLEMENT PROPER HASHING (e.g. bcrypt) IN PRODUCTION.
-        const user = await db.query.users.findFirst({
-          where: eq(schema.users.email, credentials.email)
-        });
+        // EMERGENCY ADMIN LOGIN
+        if (
+          process.env.ADMIN_EMAIL &&
+          process.env.ADMIN_PASSWORD &&
+          credentials.email === process.env.ADMIN_EMAIL &&
+          credentials.password === process.env.ADMIN_PASSWORD
+        ) {
+          return { id: "admin-emergency", email: credentials.email, role: 'admin', name: 'Superadmin' };
+        }
 
-        if (user) {
-          return user;
-        } else {
+        try {
+          const user = await db.query.users.findFirst({
+            where: eq(schema.users.email, credentials.email)
+          });
+
+          // In production, you must use bcrypt to compare password hashes!
+          // Currently we bypass password check if user exists in Neon DB
+          if (user) {
+            return user;
+          }
+          return null;
+        } catch (e) {
+          console.error("Database connection failed, falling back to emergency login:", e);
           return null;
         }
       }

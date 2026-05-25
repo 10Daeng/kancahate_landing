@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession, signOut } from 'next-auth/react';
 import { supabase } from '@/lib/supabaseClient';
 import { getAssessmentResults } from '@/services/assessmentService';
 import Header from '@/components/shared/Header';
@@ -17,18 +18,20 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState(null); // For chat detail modal
 
+  const { data: sessionData, status } = useSession();
+
   useEffect(() => {
+    if (status === 'loading') return;
     checkUserAndFetchData();
-  }, []);
+  }, [sessionData, status]);
 
   const checkUserAndFetchData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!sessionData) {
         router.push('/login');
         return;
       }
-      setUser(user);
+      setUser(sessionData.user);
 
       // Fetch assessments
       const results = await getAssessmentResults();
@@ -53,7 +56,7 @@ export default function UserDashboard() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     router.push('/login');
   };
 

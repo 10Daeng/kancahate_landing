@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession, signOut } from 'next-auth/react';
 import { supabase } from '@/lib/supabaseClient';
 import {
   Plus, Edit, Trash2, LogOut, Loader2, FolderOpen, ChevronLeft,
@@ -41,18 +42,20 @@ export default function AdminCategoriesPage() {
     color: PREDEFINED_COLORS[0].name.toLowerCase(),
   });
 
+  const { data: sessionData, status } = useSession();
+
   useEffect(() => {
+    if (status === 'loading') return;
     checkAuth();
-  }, []);
+  }, [sessionData, status]);
 
   const checkAuth = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!sessionData) {
         router.push('/login?redirect=/admin/categories');
         return;
       }
-      setUser(user);
+      setUser(sessionData.user);
       await fetchCategories();
     } catch (error) {
       console.error('Auth error:', error);
@@ -189,7 +192,7 @@ export default function AdminCategoriesPage() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     router.push('/login');
   };
 

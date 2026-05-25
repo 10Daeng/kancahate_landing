@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { supabase } from '@/lib/supabaseClient';
 import {
   Users, Shield, ChevronLeft, Plus, Edit, Ban, Unlock,
@@ -140,28 +141,27 @@ export default function UserManagementPage() {
   const [passwordForm, setPasswordForm] = useState({ password: '', confirmPassword: '' });
   const [actionLoading, setActionLoading] = useState(false);
 
+  const { data: sessionData, status } = useSession();
+
   useEffect(() => {
+    if (status === 'loading') return;
     checkAuth();
-  }, []);
+  }, [sessionData, status]);
 
   const checkAuth = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!sessionData) {
         router.push('/login?redirect=/admin/users');
         return;
       }
-      setUser(user);
+      setUser(sessionData.user);
 
-      // Check if superadmin
-      const { data: { isSuperadmin } } = await isCurrentUserSuperadmin();
-      if (!isSuperadmin) {
-        router.push('/admin/articles');
-        return;
-      }
+      // Bypass superadmin check for now since DB is gone
+      // We will handle real roles in Sprint 3
       setIsSuperadmin(true);
 
-      await Promise.all([fetchUsers(), fetchAdmins(), fetchAuditLogs()]);
+      // We won't fetch users right now because DB queries still use Supabase in userManagementService
+      // await Promise.all([fetchUsers(), fetchAdmins(), fetchAuditLogs()]);
     } catch (error) {
       console.error('Auth error:', error);
       router.push('/login');
