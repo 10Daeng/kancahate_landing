@@ -23,6 +23,7 @@ import ChatRoomView from './chat/ChatRoomView';
 import ChatModal from './chat/ChatModal';
 import Header from './shared/Header';
 import Footer from './shared/Footer';
+import HeroChatMockup from './HeroChatMockup';
 import { BigFiveView, MBTIView, PSS10View, GAD7View, RIASECView, PHQ9View, RosenbergView, VARKView, MultipleIntelligenceView, LoveLanguagesView } from './assessments';
 
 // Testimonial Data
@@ -422,8 +423,8 @@ function HeroSection({ onStartChat }) {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-12 md:py-16 w-full">
-        <div className="max-w-2xl">
+      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-12 md:py-16 w-full flex flex-col lg:flex-row lg:items-center justify-between gap-12 lg:gap-8">
+        <div className="max-w-2xl flex-shrink-0 z-10 relative">
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -510,6 +511,11 @@ function HeroSection({ onStartChat }) {
               <span className="text-emerald-500">✓</span> Tersedia 24/7
             </span>
           </motion.div>
+        </div>
+
+        {/* Hero Chat Mockup for Desktop */}
+        <div className="hidden lg:block w-full max-w-md z-10 relative">
+          <HeroChatMockup />
         </div>
       </div>
 
