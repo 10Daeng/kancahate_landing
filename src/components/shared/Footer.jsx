@@ -4,7 +4,7 @@ import { Phone, Heart, Instagram, Twitter } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="relative overflow-hidden">
+    <footer className="relative overflow-hidden z-0">
       {/* Aurora background */}
       <div className="absolute inset-0 -z-10"
         style={{

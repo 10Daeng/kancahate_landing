@@ -215,7 +215,7 @@ function TestimonialSection() {
   const current = testimonials.slice(currentIndex * itemsPerSlide, currentIndex * itemsPerSlide + itemsPerSlide);
 
   return (
-    <section ref={ref} id="testimonials" className="py-16 md:py-20 relative overflow-hidden">
+    <section ref={ref} id="testimonials" className="py-16 md:py-20 relative overflow-hidden z-0">
       {/* Aurora bg */}
       <div className="absolute inset-0 -z-10 aurora-bg" />
       
@@ -379,7 +379,7 @@ function HeroSection({ onStartChat }) {
   return (
     <section
       id="hero"
-      className="relative min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden pt-10 pb-8"
+      className="relative min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden pt-10 pb-8 z-0"
     >
       {/* Aurora background blobs */}
       <div className="absolute inset-0 -z-10" style={{
@@ -532,7 +532,7 @@ function StatsStrip() {
   ];
 
   return (
-    <section ref={ref} className="py-10 relative overflow-hidden">
+    <section ref={ref} className="py-10 relative overflow-hidden z-0">
       <div className="absolute inset-0"
         style={{ background: 'linear-gradient(135deg, #7C3AED, #A855F7, #EC4899)', opacity: 0.04 }}
       />
@@ -564,7 +564,7 @@ function QuickAccessSection({ onStartChat }) {
   const [ref, inView] = useScrollReveal();
 
   return (
-    <section id="resources" className="py-16 md:py-20 relative overflow-hidden">
+    <section id="resources" className="py-16 md:py-20 relative overflow-hidden z-0">
       {/* Subtle background */}
       <div className="absolute inset-0 -z-10"
         style={{ background: 'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(245,243,255,0.9), white)' }}
@@ -644,7 +644,7 @@ function HowItWorksSection() {
   const [ref, inView] = useScrollReveal();
 
   return (
-    <section id="how-it-works" className="py-20 md:py-28 relative overflow-hidden">
+    <section id="how-it-works" className="py-16 md:py-20 relative overflow-hidden z-0">
       {/* Background */}
       <div className="absolute inset-0 -z-10"
         style={{
@@ -715,7 +715,7 @@ function CTASection({ onStartChat }) {
   const [ref, inView] = useScrollReveal();
 
   return (
-    <section className="py-20 md:py-24 px-6 relative overflow-hidden">
+    <section className="py-16 md:py-20 px-6 relative overflow-hidden z-0">
       {/* Gradient background */}
       <div className="absolute inset-0 -z-10"
         style={{
