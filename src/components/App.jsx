@@ -38,10 +38,9 @@ const testimonials = [
   { name: "Ahmad F.", role: "Pelajar SMP • Pamekasan", text: "Platform yang keren! Aku jadi punya tempat cerita yang aman tanpa takut dihakimi.", emoji: "💪", color: "from-rose-500 to-pink-600", reaction: "7.4k 💪" },
 ];
 
-// Scroll reveal hook
 function useScrollReveal() {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const isInView = useInView(ref, { once: true, margin: "-10px" });
   return [ref, isInView];
 }
 

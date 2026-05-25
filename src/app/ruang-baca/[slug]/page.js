@@ -81,24 +81,24 @@ function ArticleDetailClient({ article }) {
 
   const share = (platform) => {
     const text = `Baca artikel menarik ini: "${article.title}" di Kancah Ate!`;
-    let shareUrl = '';
+    let targetUrl = '';
 
     switch (platform) {
       case 'facebook':
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        targetUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
         break;
       case 'twitter':
-        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+        targetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
         break;
       case 'linkedin':
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+        targetUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
         break;
       case 'whatsapp':
-        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + shareUrl)}`;
+        targetUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + shareUrl)}`;
         break;
     }
 
-    if (shareUrl) window.open(shareUrl, '_blank', 'width=600,height=400');
+    if (targetUrl) window.open(targetUrl, '_blank', 'width=600,height=400');
   };
 
   const copyLink = () => {
@@ -299,7 +299,7 @@ function ArticleDetailClient({ article }) {
                   <Calendar size={16} /> {article.date}
                 </div>
                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-                  <Eye size={16} /> {Math.floor(Math.random() * 5000 + 1000).toLocaleString()} dibaca
+                  <Eye size={16} /> {article.views ? article.views.toLocaleString() : Math.floor((article.id?.toString().charCodeAt(0) || 1) * 314 % 4000 + 1000).toLocaleString()} dibaca
                 </div>
               </div>
             </div>
