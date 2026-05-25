@@ -215,7 +215,7 @@ function TestimonialSection() {
   const current = testimonials.slice(currentIndex * itemsPerSlide, currentIndex * itemsPerSlide + itemsPerSlide);
 
   return (
-    <section ref={ref} id="testimonials" className="py-20 md:py-28 relative overflow-hidden">
+    <section ref={ref} id="testimonials" className="py-16 md:py-20 relative overflow-hidden">
       {/* Aurora bg */}
       <div className="absolute inset-0 -z-10 aurora-bg" />
       
@@ -379,7 +379,7 @@ function HeroSection({ onStartChat }) {
   return (
     <section
       id="hero"
-      className="relative min-h-[90vh] md:min-h-[85vh] flex items-center overflow-hidden"
+      className="relative min-h-[80vh] md:min-h-[85vh] flex items-center overflow-hidden pt-10 pb-8"
     >
       {/* Aurora background blobs */}
       <div className="absolute inset-0 -z-10" style={{
@@ -422,7 +422,7 @@ function HeroSection({ onStartChat }) {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-20 w-full">
+      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-12 md:py-16 w-full">
         <div className="max-w-2xl">
           {/* Badge */}
           <motion.div
@@ -564,7 +564,7 @@ function QuickAccessSection({ onStartChat }) {
   const [ref, inView] = useScrollReveal();
 
   return (
-    <section id="resources" className="py-20 md:py-28 relative overflow-hidden">
+    <section id="resources" className="py-16 md:py-20 relative overflow-hidden">
       {/* Subtle background */}
       <div className="absolute inset-0 -z-10"
         style={{ background: 'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(245,243,255,0.9), white)' }}

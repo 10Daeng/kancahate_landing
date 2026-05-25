@@ -596,8 +596,8 @@ function ArticleDetailClient({ article }) {
   );
 }
 
-export default function ArticleDetailPage({ params }) {
-  const { slug } = params;
+export default async function ArticleDetailPage({ params }) {
+  const { slug } = await params;
   const article = articles.find(a => a.slug === slug);
 
   if (!article) {
