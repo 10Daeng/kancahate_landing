@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Home, BookOpen, Shield, User } from 'lucide-react';
+import { Home, BookOpen, Shield, User, BrainCircuit } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -16,6 +16,7 @@ export default function BottomNav() {
 
   const navItems = [
     { name: 'Beranda', href: '/', icon: Home },
+    { name: 'Tes Seru', href: '/psikotes', icon: BrainCircuit },
     { name: 'Ruang Baca', href: '/ruang-baca', icon: BookOpen },
     { name: 'Lapor', href: '/laporan-kejadian', icon: Shield },
     { name: 'Profil', href: '/dashboard', icon: User },
@@ -44,7 +45,7 @@ export default function BottomNav() {
             <Link 
               key={item.name} 
               href={item.href}
-              className="relative flex flex-col items-center justify-center w-16 h-12"
+              className="relative flex flex-col items-center justify-center w-14 h-12"
             >
               {isActive && (
                 <motion.div

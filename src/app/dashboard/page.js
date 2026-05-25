@@ -8,7 +8,7 @@ import { getUserCounselingSessions } from '@/services/counselingService';
 import { getAssessmentResults } from '@/services/assessmentService';
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
-import { Loader2, LogOut, Award, Calendar, ChevronRight, User, Activity, MessageCircle, Heart, X, Clock } from 'lucide-react';
+import { Loader2, LogOut, Award, Calendar, ChevronRight, User, Activity, MessageCircle, Heart, X, Clock, Shield } from 'lucide-react';
 
 export default function UserDashboard() {
   const router = useRouter();
