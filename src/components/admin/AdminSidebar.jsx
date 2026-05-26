@@ -18,58 +18,58 @@ const ADMIN_MENUS = [
   { name: 'Laporan Insiden', href: '/admin/incident-reports', icon: AlertTriangle },
 ];
 
+const SidebarContent = ({ pathname, setIsOpen }) => (
+  <div className="flex flex-col h-full bg-slate-900 text-white">
+    {/* Brand Header */}
+    <div className="h-16 flex items-center px-6 border-b border-slate-800">
+      <div className="flex items-center gap-3 text-xl font-bold text-violet-400">
+        <BookOpen size={24} />
+        <span>Kancah Admin</span>
+      </div>
+    </div>
+
+    {/* Navigation Links */}
+    <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
+      {ADMIN_MENUS.map((menu) => {
+        const isActive = pathname?.startsWith(menu.href);
+        const Icon = menu.icon;
+        
+        return (
+          <Link
+            key={menu.href}
+            href={menu.href}
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
+              isActive 
+                ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/50' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <Icon size={20} className={isActive ? 'text-white' : 'text-slate-500'} />
+            {menu.name}
+          </Link>
+        );
+      })}
+    </div>
+
+    {/* Bottom Actions */}
+    <div className="p-4 border-t border-slate-800">
+      <Link
+        href="/dashboard"
+        className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-medium"
+      >
+        <ArrowLeft size={20} />
+        Kembali ke Web
+      </Link>
+    </div>
+  </div>
+);
+
 export default function AdminSidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
-
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-slate-900 text-white">
-      {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800">
-        <div className="flex items-center gap-3 text-xl font-bold text-violet-400">
-          <BookOpen size={24} />
-          <span>Kancah Admin</span>
-        </div>
-      </div>
-
-      {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
-        {ADMIN_MENUS.map((menu) => {
-          const isActive = pathname?.startsWith(menu.href);
-          const Icon = menu.icon;
-          
-          return (
-            <Link
-              key={menu.href}
-              href={menu.href}
-              onClick={() => setIsOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
-                isActive 
-                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/50' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Icon size={20} className={isActive ? 'text-white' : 'text-slate-500'} />
-              {menu.name}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Bottom Actions */}
-      <div className="p-4 border-t border-slate-800">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-medium"
-        >
-          <ArrowLeft size={20} />
-          Kembali ke Web
-        </Link>
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -83,7 +83,7 @@ export default function AdminSidebar() {
 
       {/* Desktop Sidebar (Always visible on large screens) */}
       <aside className="hidden lg:flex flex-col w-72 h-screen fixed left-0 top-0 z-40 bg-slate-900">
-        <SidebarContent />
+        <SidebarContent pathname={pathname} setIsOpen={setIsOpen} />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -110,7 +110,7 @@ export default function AdminSidebar() {
               >
                 <X size={24} />
               </button>
-              <SidebarContent />
+              <SidebarContent pathname={pathname} setIsOpen={setIsOpen} />
             </motion.aside>
           </>
         )}
