@@ -131,6 +131,7 @@ export async function createSession(sessionData) {
     const newSession = await db.insert(schema.counselingSessions)
       .values({
         userId: sessionData.userId,
+        anonUserId: sessionData.anonUserId,
         category: sessionData.category,
         subtopic: sessionData.subtopic,
         subtopicCustom: sessionData.subtopic_custom || false,
@@ -231,6 +232,7 @@ export async function saveChatDraft(sessionId, sessionData) {
         .values({
           sessionId,
           userId,
+          anonUserId: sessionData.anonUserId,
           sessionData,
           lastSavedAt: new Date()
         });

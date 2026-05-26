@@ -8,117 +8,49 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function getCategories() {
   try {
-    const data = await db.select().from(schema.articleCategories).orderBy(schema.articleCategories.name);
-    return { success: true, data };
+    const data = await db.selectDistinct({ category: schema.articles.category }).from(schema.articles);
+    
+    const uniqueCats = data
+      .filter(item => item.category)
+      .map(item => ({
+        id: item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: item.category,
+        slug: item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      }));
+
+    return { success: true, data: uniqueCats };
   } catch (error) {
-    if (!error.message?.includes('does not exist')) {
-      console.error('Error fetching categories:', error);
-    }
+    console.error('Error fetching categories:', error);
     return { success: false, error: error.message };
   }
 }
 
 export async function getPublishedArticles({ categorySlug, limit = 10, offset = 0 } = {}) {
   try {
-    let baseQuery = db.select({
-      id: schema.articles.id,
-      title: schema.articles.title,
-      slug: schema.articles.slug,
-      excerpt: schema.articles.excerpt,
-      content: schema.articles.content,
-      categoryId: schema.articles.categoryId,
-      featuredImageUrl: schema.articles.featuredImageUrl,
-      status: schema.articles.status,
-      authorId: schema.articles.authorId,
-      authorName: schema.articles.authorName,
-      viewCount: schema.articles.viewCount,
-      publishedAt: schema.articles.publishedAt,
-      createdAt: schema.articles.createdAt,
-      updatedAt: schema.articles.updatedAt,
-      category: {
-        id: schema.articleCategories.id,
-        name: schema.articleCategories.name,
-        slug: schema.articleCategories.slug,
-        icon: schema.articleCategories.icon
-      }
-    })
-    .from(schema.articles)
-    .leftJoin(schema.articleCategories, eq(schema.articles.categoryId, schema.articleCategories.id))
-    .where(eq(schema.articles.status, 'published'));
-
-    if (categorySlug) {
-      const category = await db.query.articleCategories.findFirst({
-        where: eq(schema.articleCategories.slug, categorySlug)
-      });
-      if (category) {
-        baseQuery = db.select({
-            id: schema.articles.id,
-            title: schema.articles.title,
-            slug: schema.articles.slug,
-            excerpt: schema.articles.excerpt,
-            content: schema.articles.content,
-            categoryId: schema.articles.categoryId,
-            featuredImageUrl: schema.articles.featuredImageUrl,
-            status: schema.articles.status,
-            authorId: schema.articles.authorId,
-            authorName: schema.articles.authorName,
-            viewCount: schema.articles.viewCount,
-            publishedAt: schema.articles.publishedAt,
-            createdAt: schema.articles.createdAt,
-            updatedAt: schema.articles.updatedAt,
-            category: {
-              id: schema.articleCategories.id,
-              name: schema.articleCategories.name,
-              slug: schema.articleCategories.slug,
-              icon: schema.articleCategories.icon
-            }
-        })
-        .from(schema.articles)
-        .leftJoin(schema.articleCategories, eq(schema.articles.categoryId, schema.articleCategories.id))
-        .where(sql`${schema.articles.status} = 'published' AND ${schema.articles.categoryId} = ${category.id}`);
-      }
-    }
+    let baseQuery = db.select().from(schema.articles).where(eq(schema.articles.status, 'published'));
 
     const data = await baseQuery.orderBy(desc(schema.articles.publishedAt)).limit(limit).offset(offset);
 
-    // Map `category` to object instead of nested structure from join if needed
-    return { success: true, data };
+    // Map the results so frontend doesn't break
+    const mappedData = data.map(article => ({
+      ...article,
+      featuredImageUrl: article.coverImage,
+      category: article.category // now a string
+    }));
+
+    return { success: true, data: mappedData };
   } catch (error) {
-    if (!error.message?.includes('does not exist') && !error.code?.includes('PGRST116')) {
-      console.error('Error fetching articles:', error);
-    }
+    console.error('Error fetching articles:', error);
     return { success: false, error: error.message };
   }
 }
 
 export async function getArticleBySlug(slug) {
   try {
-    const data = await db.select({
-      id: schema.articles.id,
-      title: schema.articles.title,
-      slug: schema.articles.slug,
-      excerpt: schema.articles.excerpt,
-      content: schema.articles.content,
-      categoryId: schema.articles.categoryId,
-      featuredImageUrl: schema.articles.featuredImageUrl,
-      status: schema.articles.status,
-      authorId: schema.articles.authorId,
-      authorName: schema.articles.authorName,
-      viewCount: schema.articles.viewCount,
-      publishedAt: schema.articles.publishedAt,
-      createdAt: schema.articles.createdAt,
-      updatedAt: schema.articles.updatedAt,
-      category: {
-        id: schema.articleCategories.id,
-        name: schema.articleCategories.name,
-        slug: schema.articleCategories.slug,
-        icon: schema.articleCategories.icon
-      }
-    })
-    .from(schema.articles)
-    .leftJoin(schema.articleCategories, eq(schema.articles.categoryId, schema.articleCategories.id))
-    .where(eq(schema.articles.slug, slug))
-    .limit(1);
+    const data = await db.select()
+      .from(schema.articles)
+      .where(eq(schema.articles.slug, slug))
+      .limit(1);
 
     const article = data[0];
 
@@ -128,6 +60,8 @@ export async function getArticleBySlug(slug) {
         .set({ viewCount: sql`${schema.articles.viewCount} + 1` })
         .where(eq(schema.articles.id, article.id))
         .execute();
+      
+      article.featuredImageUrl = article.coverImage;
     }
 
     return { success: true, data: article || null };
@@ -139,32 +73,14 @@ export async function getArticleBySlug(slug) {
 
 export async function getArticleById(id) {
   try {
-    const data = await db.select({
-      id: schema.articles.id,
-      title: schema.articles.title,
-      slug: schema.articles.slug,
-      excerpt: schema.articles.excerpt,
-      content: schema.articles.content,
-      categoryId: schema.articles.categoryId,
-      featuredImageUrl: schema.articles.featuredImageUrl,
-      status: schema.articles.status,
-      authorId: schema.articles.authorId,
-      authorName: schema.articles.authorName,
-      viewCount: schema.articles.viewCount,
-      publishedAt: schema.articles.publishedAt,
-      createdAt: schema.articles.createdAt,
-      updatedAt: schema.articles.updatedAt,
-      category: {
-        id: schema.articleCategories.id,
-        name: schema.articleCategories.name,
-        slug: schema.articleCategories.slug,
-        icon: schema.articleCategories.icon
-      }
-    })
-    .from(schema.articles)
-    .leftJoin(schema.articleCategories, eq(schema.articles.categoryId, schema.articleCategories.id))
-    .where(eq(schema.articles.id, id))
-    .limit(1);
+    const data = await db.select()
+      .from(schema.articles)
+      .where(eq(schema.articles.id, id))
+      .limit(1);
+      
+    if (data[0]) {
+      data[0].featuredImageUrl = data[0].coverImage;
+    }
 
     return { success: true, data: data[0] || null };
   } catch (error) {
@@ -175,33 +91,16 @@ export async function getArticleById(id) {
 
 export async function getAllArticlesAdmin() {
   try {
-    const data = await db.select({
-      id: schema.articles.id,
-      title: schema.articles.title,
-      slug: schema.articles.slug,
-      excerpt: schema.articles.excerpt,
-      content: schema.articles.content,
-      categoryId: schema.articles.categoryId,
-      featuredImageUrl: schema.articles.featuredImageUrl,
-      status: schema.articles.status,
-      authorId: schema.articles.authorId,
-      authorName: schema.articles.authorName,
-      viewCount: schema.articles.viewCount,
-      publishedAt: schema.articles.publishedAt,
-      createdAt: schema.articles.createdAt,
-      updatedAt: schema.articles.updatedAt,
-      category: {
-        id: schema.articleCategories.id,
-        name: schema.articleCategories.name,
-        slug: schema.articleCategories.slug,
-        icon: schema.articleCategories.icon
-      }
-    })
-    .from(schema.articles)
-    .leftJoin(schema.articleCategories, eq(schema.articles.categoryId, schema.articleCategories.id))
-    .orderBy(desc(schema.articles.createdAt));
+    const data = await db.select()
+      .from(schema.articles)
+      .orderBy(desc(schema.articles.createdAt));
 
-    return { success: true, data };
+    const mappedData = data.map(article => ({
+      ...article,
+      featuredImageUrl: article.coverImage,
+    }));
+
+    return { success: true, data: mappedData };
   } catch (error) {
     console.error('Error fetching articles (admin):', error);
     return { success: false, error: error.message };
@@ -218,8 +117,8 @@ export async function createArticle(articleData) {
       slug: generateSlug(articleData.title),
       excerpt: articleData.excerpt,
       content: articleData.content,
-      categoryId: articleData.category_id || articleData.categoryId,
-      featuredImageUrl: articleData.featured_image_url || articleData.featuredImageUrl,
+      category: articleData.category || 'Umum',
+      coverImage: articleData.featured_image_url || articleData.featuredImageUrl || articleData.coverImage,
       status: articleData.status || 'draft',
       authorId: user?.id || null,
       authorName: user?.name || null,
@@ -246,12 +145,14 @@ export async function updateArticle(id, updates) {
     }
     if (updates.excerpt !== undefined) mappedUpdates.excerpt = updates.excerpt;
     if (updates.content) mappedUpdates.content = updates.content;
-    if (updates.category_id !== undefined) mappedUpdates.categoryId = updates.category_id;
-    if (updates.featured_image_url !== undefined) mappedUpdates.featuredImageUrl = updates.featured_image_url;
+    if (updates.category !== undefined) mappedUpdates.category = updates.category;
+    if (updates.featured_image_url !== undefined || updates.coverImage !== undefined) {
+      mappedUpdates.coverImage = updates.featured_image_url || updates.coverImage;
+    }
     
     if (updates.status) {
       mappedUpdates.status = updates.status;
-      if (updates.status === 'published' && !updates.published_at) {
+      if (updates.status === 'published' && !updates.publishedAt) {
         mappedUpdates.publishedAt = new Date();
       }
     }
@@ -289,5 +190,3 @@ function generateSlug(title) {
     .trim()
     + '-' + Date.now().toString(36);
 }
-
-

@@ -129,7 +129,7 @@ function RosenbergView({ onBack, onChat }) {
 
             <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-2xl p-6 mb-8 border border-yellow-100">
               <p className="text-xl md:text-2xl font-semibold text-slate-800 text-center leading-relaxed">
-                "{currentQuestion.text}"
+                &quot;{currentQuestion.text}&quot;
               </p>
             </div>
 

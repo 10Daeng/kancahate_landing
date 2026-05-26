@@ -78,9 +78,12 @@ export default function EditArticlePage() {
     excerpt: '',
     content: '',
     featured_image_url: '',
-    category_id: '',
+    category: '',
     status: 'draft',
   });
+
+  const [isNewCategory, setIsNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   // Preview mode
   const [showPreview, setShowPreview] = useState(false);
@@ -126,7 +129,7 @@ export default function EditArticlePage() {
         excerpt: data.excerpt || '',
         content: data.content || '',
         featured_image_url: data.featuredImageUrl || '',
-        category_id: data.categoryId || '',
+        category: data.category || '',
         status: data.status || 'draft',
       });
     } catch (error) {
@@ -247,7 +250,7 @@ export default function EditArticlePage() {
         excerpt: formData.excerpt,
         content: formData.content,
         featured_image_url: formData.featured_image_url || null,
-        category_id: formData.category_id || null,
+        category: isNewCategory ? newCategoryName : formData.category,
         status: publish ? 'published' : 'draft',
       };
 
@@ -485,28 +488,40 @@ export default function EditArticlePage() {
           <div className="space-y-6">
             {/* Category */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200">
-              <label className="block text-sm font-bold text-slate-700 mb-3">
-                Kategori
-              </label>
-              <select
-                value={formData.category_id}
-                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="">Tidak ada kategori</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.icon && `${cat.icon} `}{cat.name}
-                  </option>
-                ))}
-              </select>
-              {categories.length === 0 && (
-                <p className="text-amber-600 text-xs mt-2">
-                  Belum ada kategori.{' '}
-                  <Link href="/admin/categories" className="underline">
-                    Buat kategori
-                  </Link>
-                </p>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-bold text-slate-700">
+                  Kategori
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsNewCategory(!isNewCategory)}
+                  className="text-xs font-bold text-violet-600 hover:text-violet-700 bg-violet-50 px-2 py-1 rounded-lg"
+                >
+                  {isNewCategory ? 'Pilih yang ada' : '+ Kategori Baru'}
+                </button>
+              </div>
+              
+              {isNewCategory ? (
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Ketik kategori baru..."
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+              ) : (
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                >
+                  <option value="">Pilih kategori...</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.name}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
 

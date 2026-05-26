@@ -13,11 +13,11 @@ import { AlertTriangle, Phone, HeartHandshake, Heart } from 'lucide-react';
  * @param {string} userName - Nama pengguna untuk personalisasi
  */
 function CrisisModal({ isOpen, onClose, riskLevel, userName }) {
+  const [ackChecked, setAckChecked] = useState(false);
+  
   if (!isOpen) return null;
 
   const isCritical = riskLevel === 'Kritis';
-  const [ackChecked, setAckChecked] = useState(false);
-  
   return (
     <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
       <motion.div 

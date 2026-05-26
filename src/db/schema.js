@@ -36,6 +36,7 @@ export const userProfiles = pgTable('user_profiles', {
 export const counselingSessions = pgTable('counseling_sessions', {
   id: serial('id').primaryKey(),
   userId: uuid('user_id'),
+  anonUserId: varchar('anon_user_id', { length: 255 }),
   userEmail: varchar('user_email', { length: 255 }),
   userName: varchar('user_name', { length: 255 }),
   category: varchar('category', { length: 100 }),
@@ -60,34 +61,27 @@ export const counselingSessionsDrafts = pgTable('counseling_sessions_drafts', {
   id: serial('id').primaryKey(),
   sessionId: varchar('session_id', { length: 255 }),
   userId: uuid('user_id'),
+  anonUserId: varchar('anon_user_id', { length: 255 }),
   sessionData: jsonb('session_data'),
   lastSavedAt: timestamp('last_saved_at').defaultNow(),
 });
 
 export const articles = pgTable('articles', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').defaultRandom().primaryKey(),
   title: varchar('title', { length: 255 }).notNull(),
   slug: varchar('slug', { length: 255 }).notNull().unique(),
   excerpt: text('excerpt'),
   content: text('content').notNull(),
-  categoryId: integer('category_id'),
-  featuredImageUrl: text('featured_image_url'),
+  category: varchar('category', { length: 100 }),
+  coverImage: text('cover_image'),
   status: varchar('status', { length: 50 }).default('draft'),
   authorId: uuid('author_id'),
   authorName: varchar('author_name', { length: 255 }),
   viewCount: integer('view_count').default(0),
+  tags: jsonb('tags').default([]),
   publishedAt: timestamp('published_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-});
-
-export const articleCategories = pgTable('article_categories', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }).notNull(),
-  slug: varchar('slug', { length: 100 }).notNull().unique(),
-  description: text('description'),
-  icon: varchar('icon', { length: 50 }),
-  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const assessmentResults = pgTable('assessment_results', {

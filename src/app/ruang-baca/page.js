@@ -41,11 +41,11 @@ export default function RuangBacaPage() {
         title: a.title,
         slug: a.slug,
         excerpt: a.excerpt || '',
-        image: a.featured_image_url || 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800',
-        category: a.category?.name || 'Umum',
-        categorySlug: a.category?.slug || 'umum',
-        author: a.author_name || 'Tim Kancah Ate',
-        date: a.published_at ? new Date(a.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+        image: a.featuredImageUrl || a.coverImage || 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800',
+        category: a.category || 'Umum',
+        categorySlug: a.category ? a.category.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'umum',
+        author: a.authorName || 'Tim Kancah Ate',
+        date: a.publishedAt || a.published_at ? new Date(a.publishedAt || a.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
         readTime: `${Math.ceil((a.content?.length || 0) / 1500)} menit baca`,
         isFromDB: true
       }));

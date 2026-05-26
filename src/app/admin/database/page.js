@@ -1,19 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Database, Table, RefreshCw, HardDrive, Server, Activity } from 'lucide-react';
+import { getDatabaseStats } from '@/services/databaseService';
 
 export default function AdminDatabasePage() {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [tables, setTables] = useState([]);
+  const [totalSize, setTotalSize] = useState('0 MB');
+  const [status, setStatus] = useState('connecting');
 
-  const TABLES = [
-    { name: 'users', count: 1245, size: '2.4 MB', lastSync: '2 mnt lalu' },
-    { name: 'articles', count: 48, size: '4.1 MB', lastSync: '10 mnt lalu' },
-    { name: 'categories', count: 12, size: '0.1 MB', lastSync: '1 jam lalu' },
-    { name: 'assessments', count: 3892, size: '12.5 MB', lastSync: '1 mnt lalu' },
-    { name: 'incident_reports', count: 156, size: '1.2 MB', lastSync: '5 mnt lalu' },
-    { name: 'counseling_drafts', count: 34, size: '0.8 MB', lastSync: '30 mnt lalu' },
-  ];
+  const fetchStats = async () => {
+    setLoading(true);
+    setStatus('checking');
+    try {
+      const result = await getDatabaseStats();
+      if (result.success) {
+        setStatus('connected');
+        
+        // Neon pg_stat_user_tables rows might be in result.data
+        const dbTables = result.data || [];
+        
+        // Calculate total size
+        let totalBytes = 0;
+        const formattedTables = dbTables.map(t => {
+          totalBytes += Number(t.size_bytes || 0);
+          return {
+            name: t.table_name,
+            count: Number(t.row_count || 0),
+            size: t.total_size,
+            lastSync: 'Real-time',
+          };
+        });
+        
+        setTables(formattedTables);
+        setTotalSize((totalBytes / (1024 * 1024)).toFixed(2) + ' MB');
+      } else {
+        setStatus('error');
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -26,8 +61,12 @@ export default function AdminDatabasePage() {
             </h1>
             <p className="text-sm text-slate-500 mt-1">Pemantauan sinkronisasi dan akses ke data mentah (raw data)</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl font-bold text-sm transition-colors shadow-sm">
-            <RefreshCw size={18} />
+          <button 
+            onClick={fetchStats}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl font-bold text-sm transition-colors shadow-sm disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             Sync Database
           </button>
         </div>
@@ -61,7 +100,7 @@ export default function AdminDatabasePage() {
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-slate-400 text-xs mb-1">Penggunaan Data</p>
-                <p className="text-2xl font-black text-slate-800">21.1 MB</p>
+                <p className="text-2xl font-black text-slate-800">{totalSize}</p>
               </div>
             </div>
           </div>
@@ -101,7 +140,7 @@ export default function AdminDatabasePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {TABLES.map((table) => (
+                {tables.map((table) => (
                   <tr key={table.name} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-700 font-mono text-xs">{table.name}</td>
                     <td className="px-6 py-4 text-right text-slate-600">{table.count.toLocaleString('id-ID')}</td>

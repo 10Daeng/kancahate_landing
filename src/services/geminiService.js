@@ -63,10 +63,11 @@ export async function callGeminiAPI(history, systemPrompt, maxRetries = 3, userN
     return `Maaf sekali, ${userName}, Kai sedang istirahat sejenak. Silakan coba lagi beberapa saat ya.`;
   }
   
-  // Model yang didukung (sesuai dokumentasi resmi Google 2025)
+  // Model yang didukung — urutan prioritas: terbaru dulu, lalu fallback ke stabil
   const modelConfigs = [
+    { model: "gemini-2.5-flash-lite", endpoint: "v1beta" },
     { model: "gemini-2.5-flash", endpoint: "v1beta" },
-    { model: "gemini-2.0-flash-exp", endpoint: "v1beta" },
+    { model: "gemini-2.0-flash", endpoint: "v1beta" },
     { model: "gemini-1.5-flash", endpoint: "v1beta" },
   ];
   
@@ -108,15 +109,16 @@ export async function callGeminiAPI(history, systemPrompt, maxRetries = 3, userN
           body: JSON.stringify(payload)
         });
         
-        // Handle rate limiting (429)
+        // Handle rate limiting (429) — exponential backoff lebih lama
         if (response.status === 429) {
-          console.warn(`Rate limited, attempt ${attempt}/${maxRetries}`);
+          console.warn(`Rate limited on ${config.model}, attempt ${attempt}/${maxRetries}`);
           if (attempt < maxRetries) {
-            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+            // Backoff: 2s, 4s, 8s — jangan membombardir API
+            await new Promise(r => setTimeout(r, Math.pow(2, attempt + 1) * 1000));
             continue;
           }
           lastError = "Rate limited";
-          break; // Try next model
+          break; // Coba model berikutnya
         }
         
         // Handle 404 - model not found, try next model
@@ -172,7 +174,7 @@ export async function callGeminiAPI(history, systemPrompt, maxRetries = 3, userN
   
   // All models failed - log technical details for debugging, show user-friendly message
   console.error('[Gemini API] All models failed. Last error:', lastError);
-  return `Maaf sekali, ${userName}, sepertinya Kai sedang banyak melayani pengguna lain. Mohon tunggu sebentar atau lakukan refresh halaman ya.`;
+  return `Maaf ya ${userName}, Kai lagi melayani banyak pengguna sekarang. Tunggu sebentar dan coba kirim pesan kamu lagi ya 🙏`;
 }
 
 /**
@@ -215,8 +217,8 @@ export async function validateAnswer(question, answer, phase) {
   `;
 
   const modelConfigs = [
-    { model: "gemini-2.5-flash", endpoint: "v1beta" },
-    { model: "gemini-2.0-flash-exp", endpoint: "v1beta" },
+    { model: "gemini-2.5-flash-lite", endpoint: "v1beta" },
+    { model: "gemini-1.5-flash", endpoint: "v1beta" },
   ];
 
   for (const config of modelConfigs) {
