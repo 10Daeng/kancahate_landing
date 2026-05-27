@@ -321,7 +321,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
         setInput('');
         
         // Cek riwayat untuk mengetahui mode sebelumnya
-        const isAdvice = initialData?.history?.some(m => m.role === 'model' && m.parts[0].text.includes('Saran tadi ada yang kira-kira bisa kamu coba'));
+        const isAdvice = initialData?.metadata?.chat_mode === 'advice' || initialData?.history?.some(m => m.role === 'model' && m.parts[0].text.includes('Sambil Kai memikirkan saran'));
         const nextPhase = isAdvice ? 'advice_followup' : 'venting';
         setChatMode(isAdvice ? 'advice' : 'venting');
         setPhase(nextPhase);
@@ -409,7 +409,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     }
 
     // =============================================
-    // FASE 1.5: SUBTOPIC
+    // FASE 1.5: SUBTOPIC -> Langsung Pindah ke Choice
     // =============================================
     if (phase === 'subtopic') {
       let subtopic = textToSend;
@@ -419,73 +419,74 @@ export default function ChatRoomView({ category, onBack, initialData }) {
         return;
       }
       setUserData(prev => ({ ...prev, subtopic }));
-      setPhase('listening');
-      setDiagnosticIndex(0);
-
-      const questions = DIAGNOSTIC_QUESTIONS[category?.id] || DIAGNOSTIC_QUESTIONS.general;
-      addBotMessage(`Oke, ${userData.name || 'teman'}, kita mulai dari sini ya. ${questions[0]}`, 1200);
+      setPhase('choice');
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const choiceMsg = `Sebelum kita obrolin ini lebih jauh, ${userData.name || 'kamu'} lagi butuh apa nih dari Kai saat ini? 🤔\n\n— Pengen didengerin aja tanpa dihakimi\n— Butuh saran atau cari jalan keluar bareng-bareng`;
+        setMessages(prev => [...prev, {
+          role: 'model',
+          parts: [{ text: choiceMsg }],
+          timestamp: new Date().toISOString(),
+          isChoice: true
+        }]);
+      }, 1200);
       return;
     }
 
     if (phase === 'subtopic_custom') {
       setUserData(prev => ({ ...prev, subtopic: textToSend, subtopic_custom: true }));
-      setPhase('listening');
-      setDiagnosticIndex(0);
-      const questions = DIAGNOSTIC_QUESTIONS[category?.id] || DIAGNOSTIC_QUESTIONS.general;
-      addBotMessage(questions[0], 1200);
+      setPhase('choice');
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        const choiceMsg = `Sebelum kita obrolin ini lebih jauh, ${userData.name || 'kamu'} lagi butuh apa nih dari Kai saat ini? 🤔\n\n— Pengen didengerin aja tanpa dihakimi\n— Butuh saran atau cari jalan keluar bareng-bareng`;
+        setMessages(prev => [...prev, {
+          role: 'model',
+          parts: [{ text: choiceMsg }],
+          timestamp: new Date().toISOString(),
+          isChoice: true
+        }]);
+      }, 1200);
       return;
     }
 
     // =============================================
-    // FASE 2: LISTENING (pertanyaan diagnostik hardcoded)
+    // FASE 2: LISTENING (Hanya untuk Mode 'Advice')
     // =============================================
     if (phase === 'listening') {
       const questions = DIAGNOSTIC_QUESTIONS[category?.id] || DIAGNOSTIC_QUESTIONS.general;
       const nextDiagIdx = diagnosticIndex + 1;
 
       if (nextDiagIdx < questions.length) {
-        // Masih ada pertanyaan diagnostik
         setDiagnosticIndex(nextDiagIdx);
-
-        // Setiap 2 pertanyaan, tampilkan konten edukatif sebagai "jeda"
-        if (nextDiagIdx % 2 === 0) {
-          const eduContent = showEducationalCard();
-          setIsTyping(true);
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev,
-              {
-                role: 'model',
-                parts: [{ text: eduContent.text }],
-                timestamp: new Date().toISOString(),
-                isEducational: true,
-                eduType: eduContent.type
-              },
-              {
-                role: 'model',
-                parts: [{ text: questions[nextDiagIdx] }],
-                timestamp: new Date().toISOString()
-              }
-            ]);
-            speakText(questions[nextDiagIdx]);
-          }, 1500);
-        } else {
-          addBotMessage(questions[nextDiagIdx], 1000);
-        }
+        addBotMessage(questions[nextDiagIdx], 1000);
       } else {
-        // Semua pertanyaan diagnostik selesai → tawarkan pilihan mode
-        setPhase('choice');
+        // Semua diagnostik selesai → Masuk ke pencarian saran AI
+        setPhase('advice_followup');
         setIsTyping(true);
-        setTimeout(() => {
-          setIsTyping(false);
-          const choiceMsg = `Dari obrolan chat kita hari ini, ${userData.name || 'kamu'} lagi butuh apa nih dari Kai? 🤔\n\n— Pengen didengerin aja tanpa dihakimi\n— Butuh saran atau cari jalan keluar bareng-bareng`;
-          setMessages(prev => [...prev, {
-            role: 'model',
-            parts: [{ text: choiceMsg }],
-            timestamp: new Date().toISOString(),
-            isChoice: true
-          }]);
-        }, 1500);
+        
+        // Pindahkan Fakta Menarik sebagai Loading State
+        const eduContent = showEducationalCard();
+        setMessages(prev => [...prev, {
+          role: 'model',
+          parts: [{ text: `*Sambil Kai memikirkan saran terbaik untukmu...*\n\n💡 ${eduContent.text}` }],
+          timestamp: new Date().toISOString(),
+          isEducational: true,
+          eduType: eduContent.type
+        }]);
+
+        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice' });
+        
+        setIsTyping(false);
+        processCrisisResult(result.crisisLevel);
+        
+        if (!result.isError) {
+          setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+          speakText(result.text);
+        } else {
+          setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+        }
       }
       return;
     }
@@ -540,23 +541,30 @@ export default function ChatRoomView({ category, onBack, initialData }) {
 
     if (mode === 'venting') {
       setPhase('venting');
-      addBotMessage(`Oke, Kai dengerin sepenuhnya. Cerita aja ya, nggak ada yang dihakimi di sini. 💙\n\nMau lanjut dari mana?`, 1000);
+      addBotMessage(`Oke, Kai dengerin sepenuhnya. Cerita aja semua yang kerasa berat, pelan-pelan ya. Kai di sini buat kamu. 💙`, 1000);
     } else {
       // mode === 'advice'
-      setPhase('advice_followup');
+      setPhase('listening');
+      setDiagnosticIndex(0);
+      const questions = DIAGNOSTIC_QUESTIONS[category?.id] || DIAGNOSTIC_QUESTIONS.general;
+      
       setIsTyping(true);
-
-      const allMessages = [...messages, userMsg];
-      const result = await callChatAPI({ history: allMessages, userData, category, currentRiskLevel, mode: 'advice' });
-      setIsTyping(false);
-      processCrisisResult(result.crisisLevel);
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
-      speakText(result.text);
-
-      // Setelah saran, tanyakan kesesuaian
       setTimeout(() => {
-        addBotMessage(`Gimana, ${userData.name || 'teman'}? Saran tadi ada yang kira-kira bisa kamu coba, atau ada yang terasa sulit?`, 2000);
-      }, 3000);
+        setMessages(prev => [...prev, {
+          role: 'model',
+          parts: [{ text: `Wah, terima kasih banyak sudah mau berbagi cerita awal ini dengan Kai. Ceritamu penting banget. Supaya diskusinya jelas buat Kai dan enak buat kita urai satu per satu, Kai izin tanya beberapa hal pendek dulu, ya? Kita mulai dari...` }],
+          timestamp: new Date().toISOString()
+        }]);
+        setTimeout(() => {
+          setIsTyping(false);
+          setMessages(prev => [...prev, {
+            role: 'model',
+            parts: [{ text: questions[0] }],
+            timestamp: new Date().toISOString()
+          }]);
+          speakText(questions[0]);
+        }, 2000);
+      }, 1000);
     }
   };
 
@@ -815,7 +823,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     }
 
     // Input biasa (listening, venting, advice_followup)
-    const showEndButton = ['listening', 'venting', 'advice_followup'].includes(phase) && messages.length >= 8;
+    const showEndButton = ['listening', 'advice_followup'].includes(phase) && messages.length >= 8;
     return (
       <div className="flex flex-col gap-2 w-full">
         {/* Quick starters saat initial hook */}
@@ -1016,14 +1024,31 @@ export default function ChatRoomView({ category, onBack, initialData }) {
           </div>
         </div>
       ) : (
-        <div
-          ref={scrollRef}
-          className={`flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-3 border-x border-slate-100 transition-colors ${
-            currentRiskLevel.level === 'Kritis' ? 'bg-red-50/40' :
-            currentRiskLevel.level === 'Tinggi' ? 'bg-orange-50/40' :
-            'bg-slate-50/50'
-          }`}
-        >
+        <div className="relative flex-1 flex flex-col min-h-0 border-x border-slate-100">
+          {/* Floating End Session Button for Venting */}
+          {phase === 'venting' && messages.length > 12 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute top-4 right-4 z-20"
+            >
+              <button
+                onClick={handleEndSession}
+                className="bg-white/90 backdrop-blur-md border border-violet-200 text-violet-700 shadow-[0_8px_30px_rgb(139,92,246,0.15)] hover:bg-violet-50 hover:shadow-[0_8px_30px_rgb(139,92,246,0.25)] hover:scale-105 px-4 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2"
+              >
+                <Heart size={14} className="text-violet-500 animate-pulse" />
+                Selesai Bercerita / Legakan Sesi
+              </button>
+            </motion.div>
+          )}
+          <div
+            ref={scrollRef}
+            className={`flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-3 transition-colors ${
+              currentRiskLevel.level === 'Kritis' ? 'bg-red-50/40' :
+              currentRiskLevel.level === 'Tinggi' ? 'bg-orange-50/40' :
+              'bg-slate-50/50'
+            }`}
+          >
           {messages.map((msg, i) => renderBubble(msg, i))}
           {isTyping && (
             <div className="flex justify-start items-end gap-2">
