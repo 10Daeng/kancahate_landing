@@ -28,8 +28,8 @@ export default function Footer() {
             <div className="flex items-center gap-3 mb-5">
               <Image
                 src="/logo.png"
-                alt="Kancah Ate Logo"
-                width={44}
+                alt="Logo Kancah Ate - Kesehatan Mental Remaja"
+                width={32}
                 height={44}
                 className="object-contain"
               />

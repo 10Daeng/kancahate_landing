@@ -43,7 +43,7 @@ export default function Header({ actionButtonHandler }) {
           <div className="relative">
             <Image
               src="/logo.png"
-              alt="Kancah Ate Logo"
+              alt="Logo Kancah Ate - Platform Kesehatan Mental Remaja Indonesia"
               width={38}
               height={38}
               className="object-contain group-hover:scale-105 transition-transform"

@@ -11,6 +11,7 @@ import {
   Phone,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Shield,
   Sparkles,
   Star,
@@ -234,7 +235,7 @@ function TestimonialSection() {
             Apa Kata Mereka? 💬
           </h2>
           <p className="text-slate-500 max-w-xl mx-auto">
-            Cerita nyata dari teman-teman remaja yang sudah merasakan manfaatnya.
+            Cerita nyata dari teman-teman yang sudah merasakan manfaat dukungan kesehatan mental remaja di sini.
           </p>
         </motion.div>
 
@@ -341,6 +342,12 @@ export default function App() {
       {/* ========== CTA BANNER ========== */}
       <CTASection onStartChat={startChat} />
 
+      {/* ========== FAQ SECTION ========== */}
+      <FAQSection />
+
+      {/* ========== MEDICAL DISCLAIMER ========== */}
+      <MedicalDisclaimer />
+
       {/* ========== FOOTER ========== */}
       <Footer />
 
@@ -441,8 +448,11 @@ function HeroSection({ onStartChat }) {
             🌏 Untuk Remaja Indonesia
           </motion.div>
 
+          {/* SEO Hidden H1 */}
+          <h1 className="sr-only">Kesehatan Mental Remaja: Platform Curhat dan Tes Psikologi Kancah Ate</h1>
+
           {/* Headline */}
-          <motion.h1
+          <motion.h2
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.1 }}
@@ -454,7 +464,7 @@ function HeroSection({ onStartChat }) {
               <span className="gradient-text">Sendirian.</span>
             </span>
             {' '}💜
-          </motion.h1>
+          </motion.h2>
 
           {/* Sub */}
           <motion.p
@@ -463,7 +473,7 @@ function HeroSection({ onStartChat }) {
             transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.2 }}
             className="text-slate-500 text-lg leading-relaxed mb-8 max-w-xl font-medium"
           >
-            Ruang aman untuk curhat, kenali dirimu lewat tes psikologi, dan dapetin dukungan sebaya yang nonjudgmental.
+            Ruang aman untuk dukungan kesehatan mental remaja. Curhat online anonim, kenali dirimu lewat tes psikologi tervalidasi global, dan dapetin dukungan sebaya yang nonjudgmental.
           </motion.p>
 
           {/* CTAs */}
@@ -786,5 +796,106 @@ function FullScreenTest({ children }) {
     <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
       {children}
     </div>
+  );
+}
+
+// ========================================
+// FAQ SECTION (SEO & AI Optimization)
+// ========================================
+function FAQSection() {
+  const [ref, inView] = useScrollReveal();
+  const [openIndex, setOpenIndex] = useState(null);
+
+  const faqs = [
+    {
+      q: "Apa itu Kancah Ate?",
+      a: "Kancah Ate adalah platform kesehatan mental remaja yang menyediakan ruang curhat online anonim, tes psikologi yang tervalidasi global, dan artikel edukasi pengembangan diri."
+    },
+    {
+      q: "Apakah tes psikologi di sini akurat?",
+      a: "Ya, kami menggunakan alat ukur psikologi yang tervalidasi secara global seperti PHQ-9 (untuk depresi) dan GAD-7 (untuk kecemasan). Namun, hasilnya bersifat skrining awal dan bukan diagnosis medis resmi."
+    },
+    {
+      q: "Apakah identitas saya aman saat curhat?",
+      a: "Sangat aman. Kamu bisa curhat secara anonim tanpa perlu mendaftar atau memberikan data pribadimu. Keamanan privasi kesehatan mental remaja adalah prioritas utama kami."
+    },
+    {
+      q: "Apakah Kancah Ate bisa menggantikan psikolog?",
+      a: "Tidak. Kancah Ate berfungsi sebagai 'Pertolongan Pertama Psikologis' (Psychological First Aid) dan teman ngobrol. Jika kamu mengalami krisis berat, kami menyarankan untuk menghubungi tenaga profesional medis."
+    }
+  ];
+
+  return (
+    <section className="py-16 bg-slate-50 relative border-t border-slate-100">
+      <div className="max-w-4xl mx-auto px-6 lg:px-10">
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ type: 'spring', stiffness: 280, damping: 22 }}
+          className="text-center mb-10"
+        >
+          <h2 className="text-3xl font-extrabold text-slate-900 mb-4">
+            Tanya Jawab Seputar <span className="text-violet-600">Kancah Ate</span>
+          </h2>
+          <p className="text-slate-500">Pertanyaan yang sering diajukan tentang layanan kesehatan mental remaja kami.</p>
+        </motion.div>
+
+        <div className="space-y-4">
+          {faqs.map((faq, index) => (
+            <div 
+              key={index} 
+              className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm transition-all hover:border-violet-300"
+            >
+              <button
+                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                className="w-full text-left px-6 py-5 flex items-center justify-between font-bold text-slate-800"
+              >
+                {faq.q}
+                <ChevronDown 
+                  className={`text-slate-400 transition-transform ${openIndex === index ? 'rotate-180 text-violet-600' : ''}`} 
+                  size={20} 
+                />
+              </button>
+              <AnimatePresence>
+                {openIndex === index && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="px-6 pb-5 text-slate-600 leading-relaxed"
+                  >
+                    {faq.a}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ========================================
+// MEDICAL DISCLAIMER SECTION (E-E-A-T Trust)
+// ========================================
+function MedicalDisclaimer() {
+  return (
+    <section className="py-8 bg-white border-t border-slate-100">
+      <div className="max-w-5xl mx-auto px-6 lg:px-10">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 md:p-6 flex gap-4 text-sm text-amber-900 leading-relaxed shadow-sm items-start">
+          <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={24} />
+          <div>
+            <p className="font-bold mb-1">Disclaimer Informasi Kesehatan Mental</p>
+            <p className="opacity-90">
+              Kancah Ate adalah platform dukungan sebaya, edukasi pengembangan diri, dan tes psikologi skrining yang <strong>telah tervalidasi secara global</strong>. 
+              Platform ini BUKAN pengganti diagnosis medis, perawatan, atau terapi profesional dari psikolog/psikiater berlisensi. 
+              Jika Anda berada dalam kondisi gawat darurat atau memiliki pikiran untuk menyakiti diri sendiri, segera hubungi <a href="#crisis" className="font-bold underline hover:text-amber-700">bantuan krisis 119</a> atau fasilitas kesehatan terdekat.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

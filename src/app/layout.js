@@ -8,8 +8,12 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
-  title: "Kancah Ate",
-  description: "Teman Cerita & First Aid Kesehatan Mental Remaja",
+  title: "Kancah Ate | Teman Ngobrol, Pengembangan Diri, & Kesehatan Mental Remaja",
+  description: "Dukungan kesehatan mental remaja pertama di Indonesia. Ruang curhat anonim, tes psikologi (PHQ-9, GAD-7) yang tervalidasi global, dan artikel edukasi psikologi.",
+  keywords: ["kesehatan mental remaja", "curhat online anonim", "tes psikologi remaja", "konseling sebaya", "PHQ-9", "GAD-7", "Kancah Ate"],
+  authors: [{ name: "Kancah Ate" }],
+  creator: "Kancah Ate",
+  publisher: "Kancah Ate",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -31,8 +35,31 @@ import BottomNav from "@/components/shared/BottomNav";
 import { GoogleAnalytics } from '@next/third-parties/google';
 
 export default function RootLayout({ children }) {
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": ["WebSite", "MedicalWebPage"],
+    "name": "Kancah Ate",
+    "url": "https://kancahate.my.id",
+    "description": "Platform kesehatan mental remaja pertama di Indonesia. Ruang curhat anonim dan tes psikologi yang tervalidasi global.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Kancah Ate"
+    },
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Remaja Indonesia"
+    },
+    "specialty": "Kesehatan Mental Remaja"
+  };
+
   return (
     <html lang="id">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        />
+      </head>
       <body className={`${plusJakartaSans.variable} ${plusJakartaSans.className} md:pb-0 pb-24`}>
         <Providers>
           {children}
