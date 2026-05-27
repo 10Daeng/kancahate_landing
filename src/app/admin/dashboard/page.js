@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { getDashboardStats } from '@/services/dashboardService';
+import { checkIsAdmin } from '@/app/admin/actions';
 import {
   ChevronLeft, RefreshCw, Loader2, Users, UserCheck, UserX,
   FileText, Eye, TrendingUp, Calendar, Brain, Heart,
