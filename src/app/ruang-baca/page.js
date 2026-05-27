@@ -9,8 +9,6 @@ import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
 import { getPublishedArticles, getCategories } from '@/services/articleService';
 
-// Fallback static articles (used when database is empty)
-import { articles as staticArticles, categories as staticCategories } from '@/data/articles';
 
 export default function RuangBacaPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,9 +49,7 @@ export default function RuangBacaPage() {
       }));
       setArticles(mappedArticles);
     } else {
-      // Fallback to static articles
-      setArticles(staticArticles);
-      setCategories(staticCategories);
+      setArticles([]);
     }
     
     setLoading(false);

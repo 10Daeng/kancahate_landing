@@ -37,6 +37,11 @@ export default function UserDashboard() {
 
       const { isAdmin: adminStatus } = await checkIsAdmin();
       setIsAdmin(adminStatus);
+      
+      if (adminStatus) {
+        router.push('/admin/dashboard');
+        return;
+      }
 
       // Fetch assessments
       const results = await getAssessmentResults();

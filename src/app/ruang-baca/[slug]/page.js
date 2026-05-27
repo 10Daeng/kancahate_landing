@@ -20,10 +20,9 @@ import {
 } from 'lucide-react';
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
-import { articles } from '@/data/articles';
 
 // Client component for interactivity
-function ArticleDetailClient({ article }) {
+function ArticleDetailClient({ article, relatedArticles }) {
   const [copied, setCopied] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
   const [activeHeading, setActiveHeading] = useState('');
@@ -116,11 +115,6 @@ function ArticleDetailClient({ article }) {
       window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
     }
   };
-
-  // Get related articles (same category, excluding current)
-  const relatedArticles = articles
-    .filter(a => a.category === article.category && a.id !== article.id)
-    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-700 flex flex-col">
@@ -441,9 +435,6 @@ function ArticleDetailClient({ article }) {
                       <span className="px-3 py-1 bg-white/80 text-violet-700 rounded-full text-xs font-medium">
                         {article.category}
                       </span>
-                      <span className="px-3 py-1 bg-white/80 text-orange-700 rounded-full text-xs font-medium">
-                        {articles.filter(a => a.author === article.author).length} Artikel
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -596,13 +587,52 @@ function ArticleDetailClient({ article }) {
   );
 }
 
+import { getArticleBySlug, getPublishedArticles } from '@/services/articleService';
+
 export default async function ArticleDetailPage({ params }) {
   const { slug } = await params;
-  const article = articles.find(a => a.slug === slug);
+  
+  // Fetch from database
+  const result = await getArticleBySlug(slug);
+  const dbArticle = result?.data;
 
-  if (!article) {
+  if (!dbArticle) {
     notFound();
   }
+  
+  // Fetch related articles for the client component
+  const allResult = await getPublishedArticles({ limit: 10 });
+  const relatedArticlesRaw = allResult.success && allResult.data ? allResult.data : [];
 
-  return <ArticleDetailClient article={article} />;
+  // Map to the format expected by the client component
+  const article = {
+    id: dbArticle.id,
+    title: dbArticle.title,
+    slug: dbArticle.slug,
+    excerpt: dbArticle.excerpt || '',
+    content: dbArticle.content || '',
+    category: dbArticle.category || 'Umum',
+    image: dbArticle.featuredImageUrl || dbArticle.coverImage || 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800',
+    author: dbArticle.authorName || 'Tim Kancah Ate',
+    date: dbArticle.publishedAt ? new Date(dbArticle.publishedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+    readTime: `${Math.ceil((dbArticle.content?.length || 0) / 1500)} menit baca`,
+    views: dbArticle.viewCount || 0
+  };
+  
+  const relatedArticles = relatedArticlesRaw
+    .filter(a => a.id !== dbArticle.id && a.category === dbArticle.category)
+    .map(a => ({
+      id: a.id,
+      title: a.title,
+      slug: a.slug,
+      excerpt: a.excerpt || '',
+      category: a.category || 'Umum',
+      image: a.featuredImageUrl || a.coverImage || 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800',
+      author: a.authorName || 'Tim Kancah Ate',
+      date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+      readTime: `${Math.ceil((a.content?.length || 0) / 1500)} menit baca`
+    }))
+    .slice(0, 3);
+
+  return <ArticleDetailClient article={article} relatedArticles={relatedArticles} />;
 }
