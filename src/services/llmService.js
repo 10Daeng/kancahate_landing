@@ -25,7 +25,7 @@ const LLM_CONFIG = {
   // Model configurations
   models: {
     gemini: {
-      apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY,
+      apiKey: process.env.GEMINI_API_KEY,
       defaultModel: 'gemini-2.5-flash', // Latest, fast
       fallbackModel: 'gemini-2.0-flash-exp',    // Experimental
       maxTokens: 8192,
@@ -34,8 +34,8 @@ const LLM_CONFIG = {
       for: ['chat', 'assessment', 'daily_conversation']
     },
     claude: {
-      apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN,
-      baseUrl: process.env.NEXT_PUBLIC_ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
+      apiKey: process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN,
+      baseUrl: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
       defaultModel: 'claude-3-5-sonnet-20241022',
       fallbackModel: 'claude-3-5-haiku-20241022', // Smaller, faster, cheaper
       maxTokens: 4096,
@@ -44,8 +44,8 @@ const LLM_CONFIG = {
       for: ['crisis', 'premium_users', 'deep_therapy', 'complex_emotional']
     },
     openai: {
-      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-      baseUrl: process.env.NEXT_PUBLIC_OPENAI_BASE_URL || 'https://api.openai.com',
+      apiKey: process.env.OPENAI_API_KEY,
+      baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com',
       defaultModel: 'gpt-4o-mini',
       fallbackModel: 'gpt-4o-mini',
       maxTokens: 4096,

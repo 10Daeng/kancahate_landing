@@ -134,15 +134,14 @@ export default function AdminDashboardPage() {
         router.push('/login?redirect=/admin/dashboard');
         return;
       }
-      setUser(sessionData.user);
-
-      // We bypass admin_users check for now because DB is deleted
-      // We will rely on NextAuth session role
-      if (sessionData.user.role !== 'admin' && sessionData.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',')[0]) {
-        // Fallback admin check
-        // router.push('/admin/articles');
+      
+      const { isAdmin, user: adminUser } = await checkIsAdmin();
+      if (!isAdmin) {
+        router.push('/login?redirect=/admin/dashboard');
+        return;
       }
-
+      
+      setUser(adminUser);
       await fetchStats();
     } catch (error) {
       console.error('Auth error:', error);

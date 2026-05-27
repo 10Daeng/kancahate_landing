@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { getUserCounselingSessions } from '@/services/counselingService';
 import { getAssessmentResults } from '@/services/assessmentService';
+import { checkIsAdmin } from '@/app/admin/actions';
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
 import { Loader2, LogOut, Award, Calendar, ChevronRight, User, Activity, MessageCircle, Heart, X, Clock, Shield } from 'lucide-react';
@@ -13,6 +14,7 @@ import { Loader2, LogOut, Award, Calendar, ChevronRight, User, Activity, Message
 export default function UserDashboard() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [assessments, setAssessments] = useState([]);
   const [chatSessions, setChatSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,9 @@ export default function UserDashboard() {
         return;
       }
       setUser(sessionData.user);
+
+      const { isAdmin: adminStatus } = await checkIsAdmin();
+      setIsAdmin(adminStatus);
 
       // Fetch assessments
       const results = await getAssessmentResults();
@@ -85,7 +90,7 @@ export default function UserDashboard() {
                  <span className="font-bold text-slate-700">{user?.email}</span>
                  <span>Member sejak {new Date(user?.created_at).toLocaleDateString('id-ID', {year: 'numeric', month: 'long'})}</span>
               </div>
-              {user?.role === 'admin' || (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').includes(user?.email) ? (
+              {isAdmin ? (
                  <Link href="/admin/dashboard" className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold transition-all shadow-sm">
                    <Shield size={18} />
                    <span className="hidden sm:inline">Panel Admin</span>

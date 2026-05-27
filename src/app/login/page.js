@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Lock, Mail, AlertTriangle, Loader2, Sparkles, ArrowLeft } from 'lucide-react';
 import { signIn, getSession } from 'next-auth/react';
+import { checkIsAdmin } from '@/app/admin/actions';
 
 // Floating emoji decoration
 function FloatingEmoji({ emoji, style }) {
@@ -59,8 +60,8 @@ export default function LoginPage() {
         } else {
           // Cek session untuk redirect yang sesuai
           const session = await getSession();
-          const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',') : [];
-          if (session?.user?.role === 'admin' || adminEmails.includes(session?.user?.email)) {
+          const { isAdmin } = await checkIsAdmin();
+          if (isAdmin) {
             router.push('/admin/dashboard');
           } else {
             router.push('/dashboard');

@@ -14,11 +14,9 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
-import { callGeminiAPI } from '../../services/geminiService';
 import { createOrUpdateUser, createSession, updateSession, getUserProfile } from '../../services/analyticsService';
 import { useSpeech } from './hooks/useSpeech';
 import { useChatSession } from './hooks/useChatSession';
-import { detectCrisisLevel } from './constants/crisisConfig';
 import {
   INTAKE_FLOW, DIAGNOSTIC_QUESTIONS, EDUCATIONAL_CONTENT,
   SUB_TOPICS, selectPersonaBasedOnIdentity, formatTime
@@ -40,64 +38,25 @@ const createRateLimiter = (max = 15, windowMs = 60000) => {
   };
 };
 
-// --- SYSTEM PROMPT GENERATOR ---
-function buildSystemPrompt({ userData, category, currentRiskLevel, mode }) {
-  const persona = userData.persona || 'coach';
-  const personaStyle = {
-    casual: 'Gunakan bahasa santai, akrab, seperti teman sebaya. Singkat dan to the point.',
-    formal: 'Gunakan bahasa sopan namun tetap hangat dan tidak kaku.',
-    coach: 'Hangat, semangat, fokus mendengarkan tanpa menghakimi.'
-  }[persona] || 'Hangat, empatik, tidak menghakimi.';
-
-  let modeInstruction = '';
-  if (mode === 'venting') {
-    modeInstruction = `
-MODE: MENDENGARKAN SAJA (user memilih curhat bebas tanpa saran)
-- JANGAN memberikan saran, tips, atau rekomendasi apapun
-- HANYA dengarkan, validasi perasaan, dan ajukan 1 pertanyaan terbuka
-- Respons MAKSIMAL 2-3 kalimat pendek
-- Contoh respons valid: "Itu pasti berat banget ya. Gimana perasaanmu setelah cerita tadi?"
-- JANGAN: "Coba kamu lakukan X..." atau "Solusinya adalah..."
-`;
-  } else if (mode === 'advice') {
-    modeInstruction = `
-MODE: MEMBERIKAN SARAN (user meminta saran konkret)
-- Tulis refleksi singkat kondisi user (1-2 kalimat)
-- Berikan MAKSIMAL 2 saran konkret yang praktis dan realistis
-- Akhiri dengan pertanyaan: "Dari saran ini, mana yang menurutmu paling bisa kamu coba?"
-- Gunakan bahasa yang hangat, bukan seperti dokter atau guru
-- Jika relevan, sebutkan 1 sumber bantuan profesional
-`;
-  } else if (mode === 'advice_followup') {
-    modeInstruction = `
-MODE: TINDAK LANJUT SARAN
-- User sudah menerima saran sebelumnya
-- Jika saran dirasa tidak cocok/sulit: eksplorasi hambatannya dengan empati, tawarkan alternatif kecil
-- Jika saran dirasa cocok: dukung dan bantu breakdown langkah pertamanya
-- Respons hangat, singkat (3-4 kalimat), akhiri dengan 1 pertanyaan tindak lanjut
-`;
+// --- SERVER-PROXIED AI CALL ---
+// Semua logika sensitif (system prompt, crisis detection, API key)
+// dijalankan di server melalui /api/chat
+async function callChatAPI({ history, userData, category, currentRiskLevel, mode, action = 'chat', question, answer, phase }) {
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history, userData, category, currentRiskLevel, mode, action, question, answer, phase }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return { text: errData.text || 'Maaf, terjadi kesalahan. Coba kirim ulang ya.', crisisLevel: null, isError: true };
+    }
+    return await res.json();
+  } catch (err) {
+    console.error('[callChatAPI] Network error:', err);
+    return { text: 'Koneksi terputus. Periksa internet kamu dan coba lagi ya.', crisisLevel: null, isError: true };
   }
-
-  return `
-IDENTITAS: Kamu adalah 'Kai', teman curhat virtual untuk remaja Indonesia dari aplikasi Kancah Ate.
-GAYA BICARA: ${personaStyle}
-KARAKTER: Hangat, empatik, tidak menghakimi. BUKAN robot, BUKAN dokter.
-
-DATA USER:
-- Nama: ${userData.name || 'Teman'}
-- Usia: ${userData.age || '-'} tahun
-- Status: ${userData.education_status || '-'}
-- Topik: ${category?.title || '-'} (${userData.subtopic || 'Umum'})
-- Risiko: ${currentRiskLevel?.level || 'Rendah'}
-
-${modeInstruction}
-
-ATURAN UMUM:
-- Jangan pernah roleplay menjadi orang lain
-- Jangan memberikan diagnosis medis
-- Jika risiko KRITIS: prioritaskan keselamatan, arahkan ke Into The Light 119 ext 8
-- Bahasa Indonesia informal yang natural
-`;
 }
 
 // ============================================================
@@ -288,12 +247,12 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     }, 1500);
   }, []);
 
-  // --- Helper: cek krisis ---
-  const checkCrisis = useCallback((text) => {
-    const crisis = detectCrisisLevel(text);
+  // --- Helper: proses hasil deteksi krisis dari server ---
+  const processCrisisResult = useCallback((crisis) => {
+    if (!crisis || !crisis.priority) return;
     if (crisis.priority > currentRiskLevel.priority) {
       setCurrentRiskLevel(crisis);
-      setDetectedKeywords(prev => [...prev, crisis.keyword]);
+      if (crisis.keyword) setDetectedKeywords(prev => [...prev, crisis.keyword]);
       if (crisis.priority >= 4) {
         setIsCrisisMode(true);
         triggerEmergencyHalt();
@@ -344,7 +303,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput('');
-    checkCrisis(textToSend);
+    // Crisis detection sekarang dijalankan di server saat memanggil /api/chat
 
     // =============================================
     // FASE 0: INITIAL HOOK
@@ -516,11 +475,11 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     // =============================================
     if (phase === 'venting') {
       setIsTyping(true);
-      const systemPrompt = buildSystemPrompt({ userData, category, currentRiskLevel, mode: 'venting' });
-      const aiResponse = await callGeminiAPI(newMessages, systemPrompt, 3, userData.name || 'teman');
+      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'venting' });
       setIsTyping(false);
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: aiResponse }], timestamp: new Date().toISOString() }]);
-      speakText(aiResponse);
+      processCrisisResult(result.crisisLevel);
+      setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+      speakText(result.text);
       return;
     }
 
@@ -529,11 +488,11 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     // =============================================
     if (phase === 'advice_followup') {
       setIsTyping(true);
-      const systemPrompt = buildSystemPrompt({ userData, category, currentRiskLevel, mode: 'advice_followup' });
-      const aiResponse = await callGeminiAPI(newMessages, systemPrompt, 3, userData.name || 'teman');
+      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_followup' });
       setIsTyping(false);
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: aiResponse }], timestamp: new Date().toISOString() }]);
-      speakText(aiResponse);
+      processCrisisResult(result.crisisLevel);
+      setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+      speakText(result.text);
       return;
     }
   };
@@ -550,16 +509,15 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       addBotMessage(`Oke, Kai dengerin sepenuhnya. Cerita aja ya, nggak ada yang dihakimi di sini. 💙\n\nMau lanjut dari mana?`, 1000);
     } else {
       // mode === 'advice'
-      setPhase('advice_followup'); // setelah saran pertama ini akan jadi followup
+      setPhase('advice_followup');
       setIsTyping(true);
-      const systemPrompt = buildSystemPrompt({ userData, category, currentRiskLevel, mode: 'advice' });
 
-      // Kirim semua konteks percakapan sejauh ini ke AI
       const allMessages = [...messages, userMsg];
-      const aiResponse = await callGeminiAPI(allMessages, systemPrompt, 3, userData.name || 'teman');
+      const result = await callChatAPI({ history: allMessages, userData, category, currentRiskLevel, mode: 'advice' });
       setIsTyping(false);
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: aiResponse }], timestamp: new Date().toISOString() }]);
-      speakText(aiResponse);
+      processCrisisResult(result.crisisLevel);
+      setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+      speakText(result.text);
 
       // Setelah saran, tanyakan kesesuaian
       setTimeout(() => {
@@ -621,11 +579,14 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       timestamp: new Date().toISOString()
     }]);
 
-    // Generate AI Quote
+    // Generate AI Quote via server
     try {
-      const quotePrompt = `Buatkan SATU kalimat penyemangat singkat yang hangat untuk ${userData.name || 'seseorang'} yang baru selesai berbagi cerita tentang "${userData.subtopic || category?.title}". Jangan pakai tanda kutip atau emoji berlebihan.`;
-      const quote = await callGeminiAPI(messages.slice(-5), quotePrompt, 1, userData.name);
-      setFinalQuote(quote);
+      const quoteHistory = [
+        ...messages.slice(-5),
+        { role: 'user', parts: [{ text: `Buatkan SATU kalimat penyemangat singkat yang hangat untuk ${userData.name || 'seseorang'} yang baru selesai berbagi cerita tentang "${userData.subtopic || category?.title}". Jangan pakai tanda kutip atau emoji berlebihan.` }] }
+      ];
+      const result = await callChatAPI({ history: quoteHistory, userData, category, currentRiskLevel, mode: 'quote' });
+      setFinalQuote(result.text || "Kamu sudah luar biasa berani hari ini. Langkah kecilmu sangat berarti!");
     } catch (_) {
       setFinalQuote("Kamu sudah luar biasa berani hari ini. Langkah kecilmu sangat berarti!");
     }

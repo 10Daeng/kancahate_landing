@@ -50,7 +50,7 @@ export default function Header({ actionButtonHandler }) {
               priority
             />
           </div>
-          <span className="text-lg font-extrabold text-slate-800 hidden sm:block tracking-tight">
+          <span className="text-xl font-extrabold text-slate-800 tracking-tight">
             Kancah <span className="gradient-text">Ate</span>
           </span>
         </Link>

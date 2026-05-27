@@ -16,7 +16,7 @@ async function requireAdmin() {
     throw new Error('Unauthorized: Anda harus login');
   }
   
-  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS ? process.env.NEXT_PUBLIC_ADMIN_EMAILS.split(',') : [];
+  const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : [];
   const isAdminRole = session.user.role === 'admin';
   const isAdminEmail = adminEmails.includes(session.user.email);
   
@@ -25,6 +25,24 @@ async function requireAdmin() {
   }
   
   return session.user;
+}
+
+/**
+ * Cek apakah user saat ini adalah admin (callable dari client)
+ */
+export async function checkIsAdmin() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) return { isAdmin: false };
+
+    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',') : [];
+    const isAdminRole = session.user.role === 'admin' || session.user.role === 'superadmin';
+    const isAdminEmail = adminEmails.includes(session.user.email);
+
+    return { isAdmin: isAdminRole || isAdminEmail, user: session.user };
+  } catch {
+    return { isAdmin: false };
+  }
 }
 
 /**

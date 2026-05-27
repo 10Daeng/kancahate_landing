@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { getAllArticlesAdmin, deleteArticle } from '@/services/articleService';
 import { getCategories } from '@/services/categoryService';
+import { checkIsAdmin } from '@/app/admin/actions';
 import {
   Plus, Edit, Trash2, Eye, Search, Filter, LogOut,
   Loader2, FileText, Calendar, Clock, AlertCircle, BarChart3
@@ -37,12 +38,13 @@ export default function AdminArticlesPage() {
         return;
       }
 
-      // Simple admin check
-      const userEmail = sessionData.user.email;
-      const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+      const { isAdmin, user: adminUser } = await checkIsAdmin();
+      if (!isAdmin) {
+        router.push('/login?redirect=/admin/articles');
+        return;
+      }
 
-      // For now, allow access
-      setUser(sessionData.user);
+      setUser(adminUser);
       await fetchArticles();
       await fetchCategories();
     } catch (error) {

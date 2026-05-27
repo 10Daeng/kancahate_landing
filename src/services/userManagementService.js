@@ -1,3 +1,5 @@
+'use server';
+
 // --- USER MANAGEMENT SERVICE ---
 // Handles user management operations for superadmin
 
@@ -47,7 +49,7 @@ export async function isCurrentUserSuperadmin() {
     if (!session?.user?.email) return { success: false, isSuperadmin: false };
 
     // Bypassing for now based on emails from env
-    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
     if (adminEmails.includes(session.user.email)) {
        return { success: true, isSuperadmin: true };
     }
@@ -68,7 +70,7 @@ export async function getCurrentUserRole() {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) return { success: false, role: null };
 
-    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
     if (adminEmails.includes(session.user.email)) {
        return { success: true, role: 'superadmin' };
     }
@@ -135,14 +137,3 @@ export async function getAuditLog(limit = 50) {
   return { success: true, data: [] }; // Mocking since audit log might not exist or need complex joins right now
 }
 
-export default {
-  getAllUsers,
-  getAdminsList,
-  isCurrentUserSuperadmin,
-  getCurrentUserRole,
-  assignUserRole,
-  toggleAdminBan,
-  toggleUserBan,
-  resetUserPassword,
-  getAuditLog
-};

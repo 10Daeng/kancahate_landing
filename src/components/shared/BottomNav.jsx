@@ -45,7 +45,7 @@ export default function BottomNav() {
             <Link 
               key={item.name} 
               href={item.href}
-              className="relative flex flex-col items-center justify-center w-14 h-12"
+              className="relative flex flex-col items-center justify-center flex-1 h-12 px-1"
             >
               {isActive && (
                 <motion.div
@@ -58,8 +58,8 @@ export default function BottomNav() {
                 whileTap={{ scale: 0.85 }}
                 className={`flex flex-col items-center gap-1 ${isActive ? 'text-violet-600' : 'text-slate-500'}`}
               >
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'drop-shadow-sm' : ''} />
-                <span className={`text-[10px] font-medium ${isActive ? 'font-bold' : ''}`}>
+                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'drop-shadow-sm' : ''} />
+                <span className={`text-[9.5px] whitespace-nowrap font-medium tracking-tight ${isActive ? 'font-bold' : ''}`}>
                   {item.name}
                 </span>
               </motion.div>

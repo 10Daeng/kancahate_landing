@@ -48,6 +48,7 @@ async function fetchUserStats() {
       newUsersThisMonth: allUsers.filter(u => new Date(u.createdAt) >= monthStart).length,
     };
   } catch (error) {
+    console.error('Error in fetchUserStats:', error);
     return {
       totalUsers: 0,
       activeUsers: 0,
@@ -73,6 +74,7 @@ async function fetchArticleStats() {
       totalArticleViews: articles.reduce((sum, a) => sum + (a.viewCount || 0), 0),
     };
   } catch (error) {
+    console.error('Error in fetchArticleStats:', error);
     return {
       totalArticles: 0,
       publishedArticles: 0,
@@ -130,6 +132,7 @@ async function fetchTestStats() {
       testsThisMonth,
     };
   } catch (error) {
+    console.error('Error in fetchTestStats:', error);
     return {
       totalTestsTaken: 0,
       uniqueTestTakers: 0,
@@ -186,6 +189,7 @@ async function fetchDailyActivity() {
       activityDays: days,
     };
   } catch (error) {
+    console.error('Error in fetchDailyActivity:', error);
     return {
       dailyViews: [0, 0, 0, 0, 0, 0, 0],
       dailyTests: [0, 0, 0, 0, 0, 0, 0],
@@ -222,6 +226,7 @@ async function fetchTopContent(testStats) {
       topTests: testStatsArray,
     };
   } catch (error) {
+    console.error('Error in fetchTopContent:', error);
     return { topArticles: [], topTests: [] };
   }
 }
