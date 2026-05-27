@@ -55,15 +55,19 @@ export default function AdminArticlesPage() {
     }
   };
 
+  const [errorMsg, setErrorMsg] = useState('');
+
   const fetchArticles = async () => {
     try {
       const result = await getAllArticlesAdmin();
       if (!result.success) throw new Error(result.error);
       
       setArticles(result.data || []);
+      setErrorMsg('');
     } catch (error) {
       console.error('Error fetching articles:', error);
       setArticles([]);
+      setErrorMsg(error.message);
     }
   };
 
@@ -156,6 +160,17 @@ export default function AdminArticlesPage() {
             </Link>
           </div>
         </div>
+
+        {/* Error Banner */}
+        {errorMsg && (
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 flex items-center gap-3">
+            <AlertCircle size={20} className="shrink-0" />
+            <div>
+              <p className="font-bold text-sm">Gagal Mengambil Data Database</p>
+              <p className="text-xs">{errorMsg}</p>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">

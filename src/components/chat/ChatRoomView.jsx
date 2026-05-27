@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, ArrowLeft, Loader2, Home, AlertTriangle, Flag,
   Mic, MicOff, Volume2, VolumeX, BookOpen, Lightbulb, Quote,
-  Phone, MessageCircle, Users, Heart
+  Phone, MessageCircle, Users, Heart, RotateCcw
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
@@ -68,6 +68,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
 
   // --- Session & Anon ID ---
   const [sessionId] = useState(() => {
+    if (initialData?.resumeDbSessionId) return `session_${Date.now()}_resume_${initialData.resumeDbSessionId}`;
     let id = localStorage.getItem('kancahate_session_id');
     if (!id) {
       id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -86,20 +87,28 @@ export default function ChatRoomView({ category, onBack, initialData }) {
   });
 
   // --- Core State ---
-  const [messages, setMessages] = useState([
-    {
+  const [messages, setMessages] = useState(() => {
+    if (initialData?.history && initialData.history.length > 0) {
+      return [...initialData.history, {
+        role: 'model',
+        parts: [{ text: "Halo lagi! Senang kamu kembali. Kamu mau melanjutkan cerita tentang sesi ini, atau mau mulai topik obrolan baru?" }],
+        timestamp: new Date().toISOString()
+      }];
+    }
+    return [{
       role: 'model',
       parts: [{ text: "Halo! Udah dapet posisi duduk yang nyaman buat chatting hari ini? Kenalin aku Kai 👋\n\nDi ruang chat ini aman ya, percakapan kita rahasia. Kamu juga nggak perlu buru-buru balas, ambil waktu aja kalau butuh mikir sebelum ngetik." }],
       timestamp: new Date().toISOString()
-    }
-  ]);
-  const [phase, setPhase] = useState('initial_hook');
+    }];
+  });
+  const [phase, setPhase] = useState(initialData?.history ? 'resume_choice' : 'initial_hook');
   const [intakeIndex, setIntakeIndex] = useState(0);
   const [diagnosticIndex, setDiagnosticIndex] = useState(0);
   const [chatMode, setChatMode] = useState(null); // 'venting' | 'advice' | 'advice_followup'
   const [userData, setUserData] = useState(initialData || {});
   const [loggedInUser, setLoggedInUser] = useState(null);
-  const [isRecovering, setIsRecovering] = useState(true);
+  const [isRecovering, setIsRecovering] = useState(!initialData?.history);
+  const [existingDbSessionId, setExistingDbSessionId] = useState(initialData?.resumeDbSessionId || null);
 
   // --- UI State ---
   const [input, setInput] = useState('');
@@ -136,12 +145,14 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     categoryTitle: category?.title,
     isRecovering,
     onRestore: (restored) => {
-      setPhase(restored.phase);
-      setMessages(restored.messages);
-      setUserData(restored.userData);
-      setDiagnosticIndex(restored.diagnosticIndex);
-      setCurrentRiskLevel(restored.currentRiskLevel);
-      setDetectedKeywords(restored.detectedKeywords);
+      if (restored) {
+        setPhase(restored.phase);
+        setMessages(restored.messages);
+        setUserData(restored.userData);
+        setDiagnosticIndex(restored.diagnosticIndex);
+        setCurrentRiskLevel(restored.currentRiskLevel);
+        setDetectedKeywords(restored.detectedKeywords);
+      }
       setIsRecovering(false);
     }
   });
@@ -296,6 +307,29 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     if ((phase === 'listening' || phase === 'free_chat' || phase === 'venting' || phase === 'advice_followup') && !rateLimiter.canSend()) {
       setRateLimitWarning(true);
       setTimeout(() => setRateLimitWarning(false), 5000);
+      return;
+    }
+
+    // =============================================
+    // FASE: RESUME CHOICE
+    // =============================================
+    if (phase === 'resume_choice') {
+      if (textToSend === 'Lanjutkan Cerita') {
+        const userMsg = { role: 'user', parts: [{ text: textToSend }], timestamp: new Date().toISOString() };
+        const newMessages = [...messages, userMsg];
+        setMessages(newMessages);
+        setInput('');
+        
+        // Cek riwayat untuk mengetahui mode sebelumnya
+        const isAdvice = initialData?.history?.some(m => m.role === 'model' && m.parts[0].text.includes('Saran tadi ada yang kira-kira bisa kamu coba'));
+        const nextPhase = isAdvice ? 'advice_followup' : 'venting';
+        setChatMode(isAdvice ? 'advice' : 'venting');
+        setPhase(nextPhase);
+        
+        addBotMessage("Sip, Kai siap dengerin kelanjutannya. Boleh dilanjut ceritanya ya.", 1000);
+      } else if (textToSend === 'Mulai Baru') {
+        handleNewSession(true); // pass true to skip confirmation
+      }
       return;
     }
 
@@ -535,31 +569,48 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       const { userId: dbUserId, isNewUser } = await createOrUpdateUser(userData);
       if (dbUserId) {
         const userMsgCount = messages.filter(m => m.role === 'user').length;
-        const sessionRec = await createSession({
-          userId: dbUserId,
-          category: category?.id,
-          subtopic: userData.subtopic,
-          subtopic_custom: userData.subtopic_custom || false,
-          persona_id: userData.persona || 'coach',
-          risk_level: currentRiskLevel.level,
-          risk_priority: currentRiskLevel.priority || 1,
-          chat_history: messages,
-          message_count: messages.length,
-          user_message_count: userMsgCount,
-          summary: messages.slice(-3).map(m => m.parts[0]?.text?.substring(0, 100)).join(' ') || '',
-          detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
-          started_at: sessionStartTimeRef.current.toISOString(),
-          status: 'Selesai',
-          metadata: {
-            category_title: category?.title,
-            chat_mode: chatMode,
-            is_new_user: isNewUser,
-            completed_at: new Date().toISOString()
+        const dur = Math.floor((Date.now() - sessionStartTimeRef.current.getTime()) / 1000);
+        
+        if (existingDbSessionId) {
+          // Update the existing session instead of creating a new one
+          await updateSession(existingDbSessionId, {
+            chat_history: messages,
+            message_count: messages.length,
+            user_message_count: userMsgCount,
+            summary: messages.slice(-3).map(m => m.parts[0]?.text?.substring(0, 100)).join(' ') || '',
+            detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
+            status: 'Selesai',
+            ended_at: new Date().toISOString(),
+            duration_seconds: dur,
+            completion_rate: 100
+          });
+        } else {
+          // Create new session
+          const sessionRec = await createSession({
+            userId: dbUserId,
+            category: category?.id,
+            subtopic: userData.subtopic,
+            subtopic_custom: userData.subtopic_custom || false,
+            persona_id: userData.persona || 'coach',
+            risk_level: currentRiskLevel.level,
+            risk_priority: currentRiskLevel.priority || 1,
+            chat_history: messages,
+            message_count: messages.length,
+            user_message_count: userMsgCount,
+            summary: messages.slice(-3).map(m => m.parts[0]?.text?.substring(0, 100)).join(' ') || '',
+            detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
+            started_at: sessionStartTimeRef.current.toISOString(),
+            status: 'Selesai',
+            metadata: {
+              category_title: category?.title,
+              chat_mode: chatMode,
+              is_new_user: isNewUser,
+              completed_at: new Date().toISOString()
+            }
+          });
+          if (sessionRec) {
+            await updateSession(sessionRec.id, { ended_at: new Date().toISOString(), duration_seconds: dur, completion_rate: 100 });
           }
-        });
-        if (sessionRec) {
-          const dur = Math.floor((Date.now() - sessionStartTimeRef.current.getTime()) / 1000);
-          await updateSession(sessionRec.id, { ended_at: new Date().toISOString(), duration_seconds: dur, completion_rate: 100 });
         }
       }
     } catch (err) {
@@ -592,9 +643,11 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     }
   };
 
-  const handleNewSession = async () => {
-    const confirmed = window.confirm('⚠️ Mulai percakapan baru?\n\nSemua riwayat percakapan saat ini akan dihapus dari perangkat ini.');
-    if (!confirmed) return;
+  const handleNewSession = async (skipConfirm = false) => {
+    if (!skipConfirm) {
+      const confirmed = window.confirm('⚠️ Mulai percakapan baru?\n\nSemua riwayat percakapan saat ini akan dihapus dari perangkat ini.');
+      if (!confirmed) return;
+    }
     await clearSession();
   };
 
@@ -602,6 +655,25 @@ export default function ChatRoomView({ category, onBack, initialData }) {
   // RENDER INPUT AREA
   // ============================================================
   const renderInputArea = () => {
+    if (phase === 'resume_choice') {
+      return (
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => handleSendMessage('Lanjutkan Cerita')}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-violet-600 text-white rounded-xl font-bold shadow-md hover:bg-violet-700 transition-all"
+          >
+            Lanjutkan Cerita
+          </button>
+          <button
+            onClick={() => handleSendMessage('Mulai Baru')}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold shadow-sm hover:bg-slate-200 transition-all"
+          >
+            Mulai Topik Baru
+          </button>
+        </div>
+      );
+    }
+
     if (isCrisisMode) {
       if (isTyping) {
         return (
@@ -916,6 +988,14 @@ export default function ChatRoomView({ category, onBack, initialData }) {
               {currentRiskLevel.level}
             </div>
           )}
+          {/* New Chat Button */}
+          <button
+            onClick={() => handleNewSession()}
+            className="p-1.5 rounded-lg text-xs transition-colors bg-slate-100 text-slate-500 hover:bg-orange-100 hover:text-orange-600"
+            title="Mulai Percakapan Baru"
+          >
+            <RotateCcw size={15} />
+          </button>
           {/* TTS Toggle */}
           <button
             onClick={() => setIsTTSEnabled(!isTTSEnabled)}

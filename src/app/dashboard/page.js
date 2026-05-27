@@ -381,12 +381,23 @@ export default function UserDashboard() {
                 <p className="text-sm text-slate-500">
                   {selectedSession.chat_history?.length || 0} pesan • {selectedSession.status || 'Selesai'}
                 </p>
-                <button 
-                  onClick={() => setSelectedSession(null)}
-                  className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-sm transition-colors"
-                >
-                  Tutup
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setSelectedSession(null)}
+                    className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-colors"
+                  >
+                    Tutup
+                  </button>
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem('kancahate_resume_session', JSON.stringify(selectedSession));
+                      router.push('/');
+                    }}
+                    className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-sm transition-colors"
+                  >
+                    Lanjutkan Sesi
+                  </button>
+                </div>
               </div>
             </div>
           </div>

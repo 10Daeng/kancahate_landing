@@ -294,6 +294,8 @@ export default function App() {
   
   const [currentView, setCurrentView] = useState('landing');
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [initialChatData, setInitialChatData] = useState(null);
   
   useEffect(() => {
     if (testParam) {
@@ -302,7 +304,29 @@ export default function App() {
     }
   }, [testParam]);
 
-  const [showChatModal, setShowChatModal] = useState(false);
+  // Periksa apakah ada resume session dari dashboard
+  useEffect(() => {
+    try {
+      const resumeData = localStorage.getItem('kancahate_resume_session');
+      if (resumeData) {
+        const session = JSON.parse(resumeData);
+        setInitialChatData({
+          resumeDbSessionId: session.id,
+          history: session.chat_history,
+          category: {
+            id: session.category,
+            title: session.category,
+            icon: '💬',
+            color: 'violet'
+          }
+        });
+        setShowChatModal(true);
+        localStorage.removeItem('kancahate_resume_session');
+      }
+    } catch (err) {
+      console.error('Error parsing resume session:', err);
+    }
+  }, []);
 
   const startChat = () => setShowChatModal(true);
 
@@ -373,7 +397,8 @@ export default function App() {
       <ChatModal
         isOpen={showChatModal}
         onClose={() => setShowChatModal(false)}
-        category={{ id: 'general', title: 'Curhat', icon: '💬', color: 'violet' }}
+        category={selectedCategory || { id: 'general', title: 'Curhat', icon: '💬', color: 'violet' }}
+        initialData={initialChatData}
       />
     </div>
   );

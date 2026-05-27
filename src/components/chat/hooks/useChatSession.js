@@ -51,9 +51,13 @@ export function useChatSession({
               currentRiskLevel: draft.currentRiskLevel || { level: 'Rendah', priority: 1 },
               detectedKeywords: draft.detectedKeywords || [],
             });
+            return;
           }
         }
       } catch (_) {}
+      
+      // If we reach here, there is no draft to restore
+      onRestore(null);
     };
 
     recoverSession();
