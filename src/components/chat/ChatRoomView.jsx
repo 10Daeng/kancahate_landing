@@ -1063,6 +1063,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
             </div>
           )}
         </div>
+        </div>
       )}
 
       {/* Input Area */}
