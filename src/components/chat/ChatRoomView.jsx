@@ -482,7 +482,12 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     // FASE 2: LISTENING (Hanya untuk Mode 'Advice')
     // =============================================
     if (phase === 'listening') {
-      const questions = DIAGNOSTIC_QUESTIONS[category?.id] || DIAGNOSTIC_QUESTIONS.general;
+      let topicKey = category?.id;
+      if (!topicKey || topicKey === 'general') {
+        const subMap = { "Kecemasan/Stress": "psikologi", "Hubungan Sosial": "pertemanan", "Akademik/Karir": "karir", "Keluarga": "keluarga" };
+        topicKey = subMap[userData.subtopic] || 'general';
+      }
+      const questions = DIAGNOSTIC_QUESTIONS[topicKey] || DIAGNOSTIC_QUESTIONS.general;
       const nextDiagIdx = diagnosticIndex + 1;
 
       if (nextDiagIdx < questions.length) {
@@ -573,7 +578,12 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       // mode === 'advice'
       setPhase('listening');
       setDiagnosticIndex(0);
-      const questions = DIAGNOSTIC_QUESTIONS[category?.id] || DIAGNOSTIC_QUESTIONS.general;
+      let topicKey = category?.id;
+      if (!topicKey || topicKey === 'general') {
+        const subMap = { "Kecemasan/Stress": "psikologi", "Hubungan Sosial": "pertemanan", "Akademik/Karir": "karir", "Keluarga": "keluarga" };
+        topicKey = subMap[userData.subtopic] || 'general';
+      }
+      const questions = DIAGNOSTIC_QUESTIONS[topicKey] || DIAGNOSTIC_QUESTIONS.general;
       
       setIsTyping(true);
       setTimeout(() => {
