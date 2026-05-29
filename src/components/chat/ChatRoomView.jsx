@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
-import { createOrUpdateUser, createSession, updateSession, getUserProfile } from '../../services/analyticsService';
+import { createOrUpdateUser, updateSession, getUserProfile } from '../../services/analyticsService';
 import { useSpeech } from './hooks/useSpeech';
 import { useChatSession } from './hooks/useChatSession';
 import {
@@ -130,6 +130,33 @@ export default function ChatRoomView({ category, onBack, initialData }) {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const sessionStartTimeRef = useRef(new Date());
+  
+  // --- Idle Timers ---
+  const idleTimerRef = useRef(null);
+  const promptEndTimerRef = useRef(null);
+
+  const clearIdleTimers = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (promptEndTimerRef.current) clearTimeout(promptEndTimerRef.current);
+  }, []);
+
+  const resetIdleTimer = useCallback(() => {
+    clearIdleTimers();
+    if (phase === 'listening' || phase === 'venting' || phase === 'advice_followup') {
+      idleTimerRef.current = setTimeout(() => {
+        addBotMessage("Hai Han, kamu masih di sana? Kalau kamu butuh waktu buat mikir, santai aja ya. Tapi kalau obrolan ini udah cukup melegakan buatmu, aku izin pamit ya biar sesinya tersimpan dengan aman.", 1000);
+        
+        promptEndTimerRef.current = setTimeout(() => {
+          handleEndSession();
+        }, 60000); // 1 menit setelah prompt
+      }, 300000); // 5 menit
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    resetIdleTimer();
+    return clearIdleTimers;
+  }, [messages, phase, resetIdleTimer, clearIdleTimers]);
 
   // --- Hooks ---
   const {
@@ -574,55 +601,25 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     setIsTyping(true);
 
     try {
-      const { userId: dbUserId, isNewUser } = await createOrUpdateUser(userData);
-      if (dbUserId) {
-        const userMsgCount = messages.filter(m => m.role === 'user').length;
-        const dur = Math.floor((Date.now() - sessionStartTimeRef.current.getTime()) / 1000);
-        
-        if (existingDbSessionId) {
-          // Update the existing session instead of creating a new one
-          await updateSession(existingDbSessionId, {
-            chat_history: messages,
-            message_count: messages.length,
-            user_message_count: userMsgCount,
-            summary: messages.slice(-3).map(m => m.parts[0]?.text?.substring(0, 100)).join(' ') || '',
-            detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
-            status: 'Selesai',
-            ended_at: new Date().toISOString(),
-            duration_seconds: dur,
-            completion_rate: 100
-          });
-        } else {
-          // Create new session
-          const sessionRec = await createSession({
-            userId: dbUserId,
-            category: category?.id,
-            subtopic: userData.subtopic,
-            subtopic_custom: userData.subtopic_custom || false,
-            persona_id: userData.persona || 'coach',
-            risk_level: currentRiskLevel.level,
-            risk_priority: currentRiskLevel.priority || 1,
-            chat_history: messages,
-            message_count: messages.length,
-            user_message_count: userMsgCount,
-            summary: messages.slice(-3).map(m => m.parts[0]?.text?.substring(0, 100)).join(' ') || '',
-            detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
-            started_at: sessionStartTimeRef.current.toISOString(),
-            status: 'Selesai',
-            metadata: {
-              category_title: category?.title,
-              chat_mode: chatMode,
-              is_new_user: isNewUser,
-              completed_at: new Date().toISOString()
-            }
-          });
-          if (sessionRec) {
-            await updateSession(sessionRec.id, { ended_at: new Date().toISOString(), duration_seconds: dur, completion_rate: 100 });
-          }
+      const userMsgCount = messages.filter(m => m.role === 'user').length;
+      const dur = Math.floor((Date.now() - sessionStartTimeRef.current.getTime()) / 1000);
+      
+      // Update the active session directly using sessionId (which now acts as PK/Lookup)
+      await updateSession(sessionId, {
+        chat_history: messages,
+        message_count: messages.length,
+        user_message_count: userMsgCount,
+        summary: messages.slice(-3).map(m => m.parts[0]?.text?.substring(0, 100)).join(' ') || '',
+        detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
+        status: 'Completed', // Change to completed so it counts as finished
+        metadata: {
+          category_title: category?.title,
+          chat_mode: chatMode,
+          completed_at: new Date().toISOString()
         }
-      }
+      });
     } catch (err) {
-      console.error('Error saving session:', err);
+      console.error('Error closing session:', err);
     }
 
     setIsTyping(false);

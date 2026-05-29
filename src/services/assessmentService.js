@@ -55,41 +55,27 @@ export async function saveAssessmentResult(testType, result) {
     const token = getAuthToken();
 
     if (!token) {
-      // Not logged in, save to localStorage
-      console.log('No auth token, saving to localStorage');
-      const localSave = saveAssessmentResultToLocal(testType, result, true);
-      return {
-        ...localSave,
-        requiresLogin: true,
-        savedLocally: true,
-        message: 'Hasil disimpan sementara di perangkat. Login untuk menyimpan permanen ke akun.'
-      };
+      // Not logged in, but we now SAVE TO DB as Anonymous!
+      console.log('No auth token, saving as anonymous to DB');
     }
 
-    const user = await getUserByToken(token);
-
-    if (!user) {
-      // Invalid token, save to localStorage
-      const localSave = saveAssessmentResultToLocal(testType, result, true);
-      return {
-        ...localSave,
-        requiresLogin: true,
-        savedLocally: true,
-        message: 'Sesi habis. Silakan login lagi untuk menyimpan permanen.'
-      };
+    let user = null;
+    if (token) {
+      user = await getUserByToken(token);
     }
 
     // Prepare data for database
     const assessmentData = {
-      user_id: user.id,
-      email: user.email,
+      user_id: user ? user.id : null,
+      anon_user_id: result.anonUserId || null,
+      email: user ? user.email : 'anonymous@kancahate.my.id',
       scores: result.scores || result.totalScore || null,
       test_type: testType,
       completed_at: new Date().toISOString()
     };
 
     // Save to database
-    const dbResult = await saveAssessmentResultDB(user.id, testType, result, assessmentData);
+    const dbResult = await saveAssessmentResultDB(assessmentData.user_id, testType, result, assessmentData);
 
     return { success: true, data: dbResult, savedLocally: false };
 
@@ -110,29 +96,10 @@ export async function saveAssessmentResult(testType, result) {
  * Save assessment result directly to database
  */
 async function saveAssessmentResultDB(userId, testType, result, assessmentData) {
-  const tableMap = {
-    'RIASEC': 'riasec_results',
-    'MBTI': 'mbti_results',
-    'BigFive': 'bigfive_results',
-    'VARK': 'vark_results',
-    'LoveLanguages': 'love_language_results',
-    'MI': 'mi_results',
-    'RIMB': 'rimb_results',
-    'PSS10': 'pss10_results',
-    'GAD7': 'gad7_results',
-    'PHQ9': 'phq9_results',
-    'ROSENBERG': 'rosenberg_results'
-  };
-
-  const table = tableMap[testType];
-  if (!table) {
-    throw new Error(`Unknown test type: ${testType}`);
-  }
-
   const dbResult = await sql`
-    INSERT INTO ${sql.safe(table)} (user_id, email, scores, result, completed_at)
-    VALUES (${userId}, ${assessmentData.email}, ${JSON.stringify(assessmentData.scores)}, ${JSON.stringify(result)}, NOW())
-    RETURNING id, completed_at
+    INSERT INTO assessment_results (user_id, anon_user_id, email, assessment_type, scores, result_data, created_at)
+    VALUES (${userId}, ${assessmentData.anon_user_id}, ${assessmentData.email}, ${testType}, ${JSON.stringify(assessmentData.scores)}, ${JSON.stringify(result)}, NOW())
+    RETURNING id, created_at as completed_at
   `;
 
   return dbResult[0];
@@ -288,40 +255,21 @@ export async function getAssessmentResults() {
       return JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
     }
 
-    // Get results from database
-    const tables = [
-      { name: 'riasec_results', type: 'RIASEC' },
-      { name: 'mbti_results', type: 'MBTI' },
-      { name: 'bigfive_results', type: 'BigFive' },
-      { name: 'vark_results', type: 'VARK' },
-      { name: 'love_language_results', type: 'LoveLanguages' },
-      { name: 'mi_results', type: 'MI' },
-      { name: 'rimb_results', type: 'RIMB' },
-      { name: 'pss10_results', type: 'PSS10' },
-      { name: 'gad7_results', type: 'GAD7' },
-      { name: 'phq9_results', type: 'PHQ9' },
-      { name: 'rosenberg_results', type: 'ROSENBERG' }
-    ];
-
+    // Get results from database (Single Table)
     const allResults = [];
+    try {
+      const result = await sql`
+        SELECT id, email, assessment_type as test_type, scores, result_data as result, created_at as completed_at
+        FROM assessment_results
+        WHERE user_id = ${user.id}
+        ORDER BY created_at DESC
+      `;
 
-    for (const table of tables) {
-      try {
-        const result = await sql`
-          SELECT id, email, scores, result, completed_at, created_at,
-            '${table.type}' as test_type
-          FROM ${sql.safe(table.name)}
-          WHERE user_id = ${user.id}
-          ORDER BY completed_at DESC
-        `;
-
-        if (result) {
-          allResults.push(...result);
-        }
-      } catch (e) {
-        // Table might not exist, ignore
-        console.error(`Error fetching from ${table.name}:`, e);
+      if (result) {
+        allResults.push(...result);
       }
+    } catch (e) {
+      console.error('Error fetching from assessment_results:', e);
     }
 
     // Combine with local results
@@ -373,26 +321,17 @@ export async function deleteAssessmentResult(resultId) {
       return { success: false, error: 'Sesi habis' };
     }
 
-    // Delete from database
-    const tables = ['riasec_results', 'mbti_results', 'bigfive_results', 'vark_results',
-      'love_language_results', 'mi_results', 'rimb_results', 'pss10_results',
-      'gad7_results', 'phq9_results', 'rosenberg_results'];
-
+    // Delete from single table
     let deleted = false;
-    for (const table of tables) {
-      try {
-        const result = await sql`
-          DELETE FROM ${sql.safe(table)}
-          WHERE id = ${sql.safe(resultId)}
-          AND user_id = ${user.id}
-        `;
-        if (result) {
-          deleted = true;
-          break;
-        }
-      } catch (e) {
-        // Ignore error, try next table
-      }
+    try {
+      const result = await sql`
+        DELETE FROM assessment_results
+        WHERE id = ${sql.safe(resultId)}
+        AND user_id = ${user.id}
+      `;
+      if (result) deleted = true;
+    } catch (e) {
+      console.error('Error deleting from assessment_results:', e);
     }
 
     if (deleted) {

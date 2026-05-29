@@ -145,7 +145,8 @@ export async function createSession(sessionData) {
         detectedKeywords: sessionData.detected_keywords || null,
         startedAt: sessionData.started_at ? new Date(sessionData.started_at) : new Date(),
         status: sessionData.status || 'In Progress',
-        metadata: sessionData.metadata || {}
+        metadata: sessionData.metadata || {},
+        sessionId: sessionData.session_id || sessionData.sessionId
       })
       .returning();
 
@@ -170,7 +171,7 @@ export async function updateSession(sessionId, updates) {
 
     const result = await db.update(schema.counselingSessions)
       .set(mappedUpdates)
-      .where(eq(schema.counselingSessions.id, sessionId))
+      .where(eq(schema.counselingSessions.sessionId, sessionId))
       .returning();
 
     return result[0];
@@ -203,10 +204,21 @@ export async function saveAssessmentResult(userId, testData) {
 
 export async function getChatDraft(sessionId) {
   try {
-    const draft = await db.query.counselingSessionsDrafts.findFirst({
-      where: eq(schema.counselingSessionsDrafts.sessionId, sessionId)
+    const session = await db.query.counselingSessions.findFirst({
+      where: eq(schema.counselingSessions.sessionId, sessionId)
     });
-    return { success: true, data: draft?.sessionData || null };
+    // We recreate draft structure from the actual DB row to maintain compatibility with frontend
+    if (session) {
+      const draftData = {
+        phase: session.status === 'Completed' ? 'finished' : 'listening', // Rough estimation
+        messages: session.chatHistory || [],
+        category: session.category,
+        current_risk_level: session.riskLevel,
+        detected_keywords: session.detectedKeywords ? session.detectedKeywords.split(',') : []
+      };
+      return { success: true, data: draftData };
+    }
+    return { success: true, data: null };
   } catch (error) {
     console.error('Error fetching chat draft:', error);
     return { success: false, error: error.message };
@@ -218,41 +230,49 @@ export async function saveChatDraft(sessionId, sessionData) {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id || null;
     
-    // UPSERT logic: check if exists
-    const existing = await db.query.counselingSessionsDrafts.findFirst({
-      where: eq(schema.counselingSessionsDrafts.sessionId, sessionId)
+    // UPSERT directly into counselingSessions using sessionId
+    const existing = await db.query.counselingSessions.findFirst({
+      where: eq(schema.counselingSessions.sessionId, sessionId)
     });
 
     if (existing) {
-      await db.update(schema.counselingSessionsDrafts)
-        .set({ sessionData, lastSavedAt: new Date() })
-        .where(eq(schema.counselingSessionsDrafts.sessionId, sessionId));
+      await db.update(schema.counselingSessions)
+        .set({
+          chatHistory: sessionData.messages || [],
+          messageCount: sessionData.messages?.length || 0,
+          userMessageCount: sessionData.messages?.filter(m => m.role === 'user').length || 0,
+          category: sessionData.category,
+          riskLevel: sessionData.current_risk_level,
+          detectedKeywords: sessionData.detected_keywords?.join(',') || null,
+          updatedAt: new Date()
+        })
+        .where(eq(schema.counselingSessions.sessionId, sessionId));
     } else {
-      await db.insert(schema.counselingSessionsDrafts)
+      await db.insert(schema.counselingSessions)
         .values({
-          sessionId,
-          userId,
+          sessionId: sessionId,
+          userId: userId,
           anonUserId: sessionData.anonUserId,
-          sessionData,
-          lastSavedAt: new Date()
+          category: sessionData.category,
+          chatHistory: sessionData.messages || [],
+          messageCount: sessionData.messages?.length || 0,
+          userMessageCount: sessionData.messages?.filter(m => m.role === 'user').length || 0,
+          riskLevel: sessionData.current_risk_level,
+          detectedKeywords: sessionData.detected_keywords?.join(',') || null,
+          status: 'In Progress'
         });
     }
     return { success: true };
   } catch (error) {
-    console.error('Error saving chat draft:', error);
+    console.error('Error auto-saving session:', error);
     return { success: false, error: error.message };
   }
 }
 
 export async function deleteChatDraft(sessionId) {
-  try {
-    await db.delete(schema.counselingSessionsDrafts)
-      .where(eq(schema.counselingSessionsDrafts.sessionId, sessionId));
-    return { success: true };
-  } catch (error) {
-    console.error('Error deleting chat draft:', error);
-    return { success: false, error: error.message };
-  }
+  // We no longer delete drafts because they are the actual session records.
+  // We just let them stay as 'In Progress'.
+  return { success: true };
 }
 
 export async function getUserProfile() {

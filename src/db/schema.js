@@ -35,6 +35,7 @@ export const userProfiles = pgTable('user_profiles', {
 
 export const counselingSessions = pgTable('counseling_sessions', {
   id: serial('id').primaryKey(),
+  sessionId: varchar('session_id', { length: 255 }).unique(),
   userId: uuid('user_id'),
   anonUserId: varchar('anon_user_id', { length: 255 }),
   userEmail: varchar('user_email', { length: 255 }),
@@ -57,6 +58,7 @@ export const counselingSessions = pgTable('counseling_sessions', {
   metadata: jsonb('metadata').default({}),
 });
 
+// Kept to avoid drizzle-kit data loss prompts during push, though unused now.
 export const counselingSessionsDrafts = pgTable('counseling_sessions_drafts', {
   id: serial('id').primaryKey(),
   sessionId: varchar('session_id', { length: 255 }),
@@ -87,6 +89,7 @@ export const articles = pgTable('articles', {
 export const assessmentResults = pgTable('assessment_results', {
   id: serial('id').primaryKey(),
   userId: uuid('user_id'),
+  anonUserId: varchar('anon_user_id', { length: 255 }),
   email: varchar('email', { length: 255 }),
   assessmentType: varchar('assessment_type', { length: 100 }),
   assessmentName: varchar('assessment_name', { length: 255 }),
