@@ -121,6 +121,63 @@ async function callGemini(history, systemPrompt, maxRetries = 3) {
 }
 
 /**
+ * Fallback: Panggil Groq API (LLaMA) jika Gemini gagal
+ */
+async function callGroqFallback(history, systemPrompt) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    console.error('[Chat API] GROQ_API_KEY not set');
+    return { text: null, error: 'Groq API key not configured' };
+  }
+
+  // Convert Gemini history format to OpenAI/Groq format
+  const groqMessages = [
+    { role: 'system', content: systemPrompt },
+    ...history.map(msg => ({
+      role: msg.role === 'model' ? 'assistant' : 'user',
+      content: msg.parts?.[0]?.text || ''
+    }))
+  ];
+
+  try {
+    console.log('[Chat API] Gemini failed. Falling back to Groq LLaMA...');
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: groqMessages,
+        temperature: 0.7,
+        max_tokens: 1024,
+        top_p: 0.95
+      })
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error('[Chat API] Groq Error:', response.status, errData);
+      return { text: null, error: `groq_error_${response.status}` };
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content;
+    
+    if (!text) {
+      return { text: null, error: 'groq_empty_response' };
+    }
+
+    console.log('[Chat API] Success with Groq LLaMA');
+    return { text, error: null };
+  } catch (err) {
+    console.error('[Chat API] Groq fallback failed:', err.message);
+    return { text: null, error: 'groq_network_error' };
+  }
+}
+
+/**
  * POST /api/chat
  * Body: { history, userData, category, currentRiskLevel, mode, action }
  * 
@@ -175,7 +232,14 @@ PENTING: Feedback harus dalam bahasa Indonesia santai dan tidak menghakimi.
 `;
 
       const validationHistory = [{ role: 'user', parts: [{ text: validationPrompt }] }];
-      const result = await callGemini(validationHistory, 'Kamu adalah validator jawaban.', 2);
+      let result = await callGemini(validationHistory, 'Kamu adalah validator jawaban.', 2);
+      
+      if (result.error) {
+        const groqResult = await callGroqFallback(validationHistory, 'Kamu adalah validator jawaban.');
+        if (!groqResult.error && groqResult.text) {
+          result = groqResult;
+        }
+      }
 
       if (result.text) {
         try {
@@ -203,24 +267,29 @@ PENTING: Feedback harus dalam bahasa Indonesia santai dan tidak menghakimi.
     });
 
     // --- Panggil Gemini API ---
-    const result = await callGemini(history, systemPrompt);
+    let result = await callGemini(history, systemPrompt);
 
     if (result.error) {
-      // Error-specific user-friendly messages
-      const userName = userData?.name || 'kawan';
-      const errorMessages = {
-        bad_request: `Hmm ${userName}, sepertinya ada yang salah dengan pesanmu. Coba ulangi dengan kata-kata yang berbeda ya.`,
-        forbidden: `Maaf sekali, ${userName}, Kai sedang tidak bisa mengakses sistem. Coba refresh halaman ya.`,
-        safety_blocked: 'Kai mendeteksi topik sensitif. Untuk keamananmu, silakan bicara langsung dengan konselor profesional melalui hotline 119 ext 8.',
-        empty_response: 'Maaf, Kai bingung mau jawab apa. Bisa ceritakan lebih detail?',
-        all_models_failed: `Maaf ya ${userName}, Kai lagi melayani banyak pengguna sekarang. Tunggu sebentar dan coba kirim pesan kamu lagi ya 🙏`,
-      };
+      const groqResult = await callGroqFallback(history, systemPrompt);
+      if (!groqResult.error && groqResult.text) {
+        result = groqResult;
+      } else {
+        // Error-specific user-friendly messages
+        const userName = userData?.name || 'kawan';
+        const errorMessages = {
+          bad_request: `Hmm ${userName}, sepertinya ada yang salah dengan pesanmu. Coba ulangi dengan kata-kata yang berbeda ya.`,
+          forbidden: `Maaf sekali, ${userName}, Kai sedang tidak bisa mengakses sistem. Coba refresh halaman ya.`,
+          safety_blocked: 'Kai mendeteksi topik sensitif. Untuk keamananmu, silakan bicara langsung dengan konselor profesional melalui hotline 119 ext 8.',
+          empty_response: 'Maaf, Kai bingung mau jawab apa. Bisa ceritakan lebih detail?',
+          all_models_failed: `Maaf ya ${userName}, Kai lagi melayani banyak pengguna sekarang. Tunggu sebentar dan coba kirim pesan kamu lagi ya 🙏`,
+        };
 
-      return NextResponse.json({
-        text: errorMessages[result.error] || errorMessages.all_models_failed,
-        crisisLevel: crisisResult,
-        isError: true,
-      });
+        return NextResponse.json({
+          text: errorMessages[result.error] || errorMessages.all_models_failed,
+          crisisLevel: crisisResult,
+          isError: true,
+        });
+      }
     }
 
     return NextResponse.json({
