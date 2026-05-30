@@ -15,7 +15,7 @@ const CRISIS_SCORING = {
   },
   rendah: {
     score: 1,
-    keywords: ['mati', 'hilang', 'capek', 'pergi']
+    keywords: ['pengen mati', 'mau mati', 'mau hilang', 'pengen hilang', 'capek banget', 'capek bgt', 'lelah banget', 'mau pergi jauh', 'pengen pergi jauh', 'rasanya mau pergi']
   }
 };
 
@@ -71,10 +71,9 @@ export function detectCrisisLevel(text) {
     }
   }
 
-  // 4. Cek Kata Kunci Rendah (per kata independen)
-  const words = lowerText.split(/\s+/);
+  // 4. Cek Kata Kunci Rendah (kontekstual frasa)
   for (const keyword of CRISIS_SCORING.rendah.keywords) {
-    if (words.includes(keyword)) {
+    if (lowerText.includes(keyword) || normalizedText.includes(keyword.replace(/\s/g, ''))) {
       totalScore += CRISIS_SCORING.rendah.score;
       detectedKeywords.push(keyword);
     }

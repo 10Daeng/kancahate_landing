@@ -167,6 +167,7 @@ export async function updateSession(sessionId, updates) {
     if (updates.message_count !== undefined) mappedUpdates.messageCount = updates.message_count;
     if (updates.user_message_count !== undefined) mappedUpdates.userMessageCount = updates.user_message_count;
     if (updates.detected_keywords) mappedUpdates.detectedKeywords = updates.detected_keywords;
+    if (updates.metadata) mappedUpdates.metadata = updates.metadata;
     mappedUpdates.updatedAt = new Date();
 
     const result = await db.update(schema.counselingSessions)

@@ -18,8 +18,8 @@ import { createOrUpdateUser, updateSession, getUserProfile } from '../../service
 import { useSpeech } from './hooks/useSpeech';
 import { useChatSession } from './hooks/useChatSession';
 import {
-  INTAKE_FLOW, DIAGNOSTIC_QUESTIONS, EDUCATIONAL_CONTENT,
-  SUB_TOPICS, selectPersonaBasedOnIdentity, formatTime
+  INTAKE_FLOW, EDUCATIONAL_CONTENT,
+  SUB_TOPICS, SUBTOPIC_VALIDATION_MESSAGES, selectPersonaBasedOnIdentity, formatTime
 } from './constants/chatConfig';
 import CrisisModal from './CrisisModal';
 import GroundingCard from './widgets/GroundingCard';
@@ -103,7 +103,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
   });
   const [phase, setPhase] = useState(initialData?.history ? 'resume_choice' : 'initial_hook');
   const [intakeIndex, setIntakeIndex] = useState(0);
-  const [diagnosticIndex, setDiagnosticIndex] = useState(0);
+  const [explorationCount, setExplorationCount] = useState(0);
   const [chatMode, setChatMode] = useState(null); // 'venting' | 'advice' | 'advice_followup'
   const [userData, setUserData] = useState(initialData || {});
   const [loggedInUser, setLoggedInUser] = useState(null);
@@ -126,14 +126,61 @@ export default function ChatRoomView({ category, onBack, initialData }) {
 
   // --- Educational content index ---
   const [eduIndex, setEduIndex] = useState(0);
+  const [aiTriggeredEndSession, setAiTriggeredEndSession] = useState(false);
 
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const sessionStartTimeRef = useRef(new Date());
+  const messagesRef = useRef(messages);
   
-  // --- Idle Timers ---
+  // Sinkronisasi messagesRef setiap kali messages berubah
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  
+  // --- Idle Timers & Crisis Halt Manager ---
   const idleTimerRef = useRef(null);
   const promptEndTimerRef = useRef(null);
+
+  // Efek untuk mengunci sesi menjadi 'finished' setelah 3 menit di fase 'halt'
+  useEffect(() => {
+    let crisisTimeout;
+    
+    if (phase === 'halt') {
+      // Timeout otomatis 3 menit (180.000 ms)
+      crisisTimeout = setTimeout(async () => {
+        setPhase('finished');
+        setMessages(prevMsg => [...prevMsg, {
+          role: 'model',
+          parts: [{ text: "Pesanmu ini sudah kusimpan dengan aman dan diberi tanda prioritas tinggi agar segera dibaca oleh konselor manusia. Jaga dirimu baik-baik ya." }],
+          timestamp: new Date().toISOString()
+        }]);
+        
+        // Simpan sesi ke database sebagai Escalated
+        try {
+          const currentMsgs = messagesRef.current;
+          await updateSession(sessionId, {
+            chat_history: currentMsgs,
+            message_count: currentMsgs.length,
+            user_message_count: currentMsgs.filter(m => m.role === 'user').length,
+            summary: "CRISIS ESCALATION (Sistem otomatis menghentikan percakapan karena risiko tinggi).",
+            detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
+            status: 'Escalated',
+            metadata: {
+              category_title: category?.title,
+              chat_mode: chatMode,
+              completed_at: new Date().toISOString()
+            }
+          });
+        } catch (err) {
+          console.error('Error saving escalated session:', err);
+        }
+      }, 180000);
+    }
+    
+    // Cleanup function untuk mencegah memory leak
+    return () => clearTimeout(crisisTimeout);
+  }, [phase, sessionId, detectedKeywords, category, chatMode]);
 
   const clearIdleTimers = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
@@ -142,16 +189,16 @@ export default function ChatRoomView({ category, onBack, initialData }) {
 
   const resetIdleTimer = useCallback(() => {
     clearIdleTimers();
-    if (phase === 'listening' || phase === 'venting' || phase === 'advice_followup') {
+    if (phase === 'advice_exploration' || phase === 'venting' || phase === 'advice_followup') {
       idleTimerRef.current = setTimeout(() => {
-        addBotMessage("Hai Han, kamu masih di sana? Kalau kamu butuh waktu buat mikir, santai aja ya. Tapi kalau obrolan ini udah cukup melegakan buatmu, aku izin pamit ya biar sesinya tersimpan dengan aman.", 1000);
+        addBotMessage(`Hai ${userData?.name || 'kamu'}, kamu masih di sana? Kalau kamu butuh waktu buat mikir, santai aja ya. Tapi kalau obrolan ini udah cukup melegakan buatmu, aku izin pamit ya biar sesinya tersimpan dengan aman.`, 1000);
         
         promptEndTimerRef.current = setTimeout(() => {
           handleEndSession();
         }, 60000); // 1 menit setelah prompt
       }, 300000); // 5 menit
     }
-  }, [phase]);
+  }, [phase, userData?.name, clearIdleTimers, addBotMessage]);
 
   useEffect(() => {
     resetIdleTimer();
@@ -168,7 +215,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     sessionId,
     anonUserId,
     phase, messages, userData,
-    diagnosticIndex, currentRiskLevel, detectedKeywords,
+    explorationCount, currentRiskLevel, detectedKeywords,
     categoryTitle: category?.title,
     isRecovering,
     onRestore: (restored) => {
@@ -176,7 +223,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
         setPhase(restored.phase);
         setMessages(restored.messages);
         setUserData(restored.userData);
-        setDiagnosticIndex(restored.diagnosticIndex);
+        setExplorationCount(restored.explorationCount || 0);
         setCurrentRiskLevel(restored.currentRiskLevel);
         setDetectedKeywords(restored.detectedKeywords);
       }
@@ -265,21 +312,6 @@ export default function ChatRoomView({ category, onBack, initialData }) {
             parts: [{ text: "Karena ruang chat ini anonim, aku tidak tahu kamu ada di mana dan tidak bisa memanggilkan bantuan langsung. Tolong, jangan lewati malam ini sendirian. Bisakah kamu memilih salah satu tombol di bawah ini?" }],
             timestamp: new Date().toISOString()
           }]);
-          
-          // Timeout otomatis 3 menit
-          setTimeout(() => {
-            setPhase(p => {
-              if (p === 'halt') {
-                setMessages(prevMsg => [...prevMsg, {
-                  role: 'model',
-                  parts: [{ text: "Pesanmu ini sudah kusimpan dengan aman dan diberi tanda prioritas tinggi agar segera dibaca oleh konselor manusia. Jaga dirimu baik-baik ya." }],
-                  timestamp: new Date().toISOString()
-                }]);
-                return 'finished';
-              }
-              return p;
-            });
-          }, 180000);
         }, 2000);
       }, 2000);
     }, 1500);
@@ -331,7 +363,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     const textToSend = (manualText || input).toString().trim();
     if (!textToSend || isTyping) return;
 
-    if ((phase === 'listening' || phase === 'free_chat' || phase === 'venting' || phase === 'advice_followup') && !rateLimiter.canSend()) {
+    if ((phase === 'advice_exploration' || phase === 'free_chat' || phase === 'venting' || phase === 'advice_followup') && !rateLimiter.canSend()) {
       setRateLimitWarning(true);
       setTimeout(() => setRateLimitWarning(false), 5000);
       return;
@@ -364,6 +396,39 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput('');
+
+    // =============================================
+    // JIKA USER MENGIRIM PESAN SAAT EMERGENCY HALT / SELESAI
+    // =============================================
+    if (phase === 'halt' || phase === 'finished' || phase === 'ending') {
+      if (phase === 'halt') {
+        // Beri auto-reply agar user tahu sistem sedang dimatikan demi keselamatan
+        setMessages(prev => [...prev, {
+          role: 'model',
+          parts: [{ text: "Maaf, untuk saat ini Kai sedang menonaktifkan balasan otomatis demi memprioritaskan keselamatanmu. Pesan ini tetap tersimpan dengan aman." }],
+          timestamp: new Date().toISOString()
+        }]);
+        
+        // Simpan langsung ke database setiap kali user mengetik saat halt
+        try {
+          await updateSession(sessionId, {
+            chat_history: newMessages,
+            message_count: newMessages.length,
+            user_message_count: newMessages.filter(m => m.role === 'user').length,
+            status: 'Escalated',
+            summary: "CRISIS ESCALATION (User terus mengirim pesan setelah sistem halt).",
+            detected_keywords: detectedKeywords.length > 0 ? detectedKeywords : null,
+            metadata: {
+              category_title: category?.title,
+              chat_mode: chatMode,
+              completed_at: new Date().toISOString()
+            }
+          });
+        } catch (err) {}
+      }
+      return;
+    }
+
     // Crisis detection sekarang dijalankan di server saat memanggil /api/chat
 
     // =============================================
@@ -440,7 +505,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     // =============================================
     if (phase === 'subtopic') {
       let subtopic = textToSend;
-      if (subtopic === 'Lainnya') {
+      if (subtopic === 'Lainnya / Mau ketik sendiri' || subtopic === 'Lainnya') {
         setPhase('subtopic_custom');
         addBotMessage(`Baik ${userData.name || 'teman'}, boleh ceritakan lebih spesifik?`);
         return;
@@ -448,16 +513,30 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       setUserData(prev => ({ ...prev, subtopic }));
       setPhase('choice');
       setIsTyping(true);
+      
+      const validationMsg = SUBTOPIC_VALIDATION_MESSAGES[subtopic];
+      
       setTimeout(() => {
-        setIsTyping(false);
-        const choiceMsg = `Sebelum kita obrolin ini lebih jauh, ${userData.name || 'kamu'} lagi butuh apa nih dari Kai saat ini? 🤔\n\n— Pengen didengerin aja tanpa dihakimi\n— Butuh saran atau cari jalan keluar bareng-bareng`;
-        setMessages(prev => [...prev, {
-          role: 'model',
-          parts: [{ text: choiceMsg }],
-          timestamp: new Date().toISOString(),
-          isChoice: true
-        }]);
-      }, 1200);
+        if (validationMsg) {
+          setMessages(prev => [...prev, {
+            role: 'model',
+            parts: [{ text: validationMsg }],
+            timestamp: new Date().toISOString()
+          }]);
+        }
+        
+        setTimeout(() => {
+          setIsTyping(false);
+          const choiceMsg = `Sebelum kita obrolin ini lebih jauh, ${userData.name || 'kamu'} lagi butuh apa nih dari Kai saat ini? 🤔\n\n— Pengen didengerin aja tanpa dihakimi\n— Butuh saran atau cari jalan keluar bareng-bareng`;
+          setMessages(prev => [...prev, {
+            role: 'model',
+            parts: [{ text: choiceMsg }],
+            timestamp: new Date().toISOString(),
+            isChoice: true
+          }]);
+        }, validationMsg ? 2000 : 0);
+      }, 500);
+
       return;
     }
 
@@ -479,22 +558,19 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     }
 
     // =============================================
-    // FASE 2: LISTENING (Hanya untuk Mode 'Advice')
+    // FASE 2: ADVICE EXPLORATION (AI dinamis)
     // =============================================
-    if (phase === 'listening') {
-      let topicKey = category?.id;
-      if (!topicKey || topicKey === 'general') {
-        const subMap = { "Kecemasan/Stress": "psikologi", "Hubungan Sosial": "pertemanan", "Akademik/Karir": "karir", "Keluarga": "keluarga" };
-        topicKey = subMap[userData.subtopic] || 'general';
-      }
-      const questions = DIAGNOSTIC_QUESTIONS[topicKey] || DIAGNOSTIC_QUESTIONS.general;
-      const nextDiagIdx = diagnosticIndex + 1;
-
-      if (nextDiagIdx < questions.length) {
-        setDiagnosticIndex(nextDiagIdx);
-        addBotMessage(questions[nextDiagIdx], 1000);
+    if (phase === 'advice_exploration') {
+      if (explorationCount < 1) {
+        setExplorationCount(prev => prev + 1);
+        setIsTyping(true);
+        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_exploration' });
+        setIsTyping(false);
+        processCrisisResult(result.crisisLevel);
+        setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+        speakText(result.text);
       } else {
-        // Semua diagnostik selesai → Masuk ke pencarian saran AI
+        // Eksplorasi selesai, minta saran ke AI
         setPhase('advice_followup');
         setIsTyping(true);
         
@@ -513,11 +589,17 @@ export default function ChatRoomView({ category, onBack, initialData }) {
         setIsTyping(false);
         processCrisisResult(result.crisisLevel);
         
+        let botText = result.text;
+        if (!result.isError && botText && botText.includes('Selesai Bercerita')) {
+          botText = botText.replace(/Selesai Bercerita/gi, '').trim();
+          setAiTriggeredEndSession(true);
+        }
+        
         if (!result.isError) {
-          setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
-          speakText(result.text);
+          setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
+          speakText(botText);
         } else {
-          setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+          setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
         }
       }
       return;
@@ -545,8 +627,15 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'venting' });
       setIsTyping(false);
       processCrisisResult(result.crisisLevel);
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
-      speakText(result.text);
+      
+      let botText = result.text;
+      if (botText && botText.includes('Selesai Bercerita')) {
+        botText = botText.replace(/Selesai Bercerita/gi, '').trim();
+        setAiTriggeredEndSession(true);
+      }
+      
+      setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
+      speakText(botText);
       return;
     }
 
@@ -558,8 +647,15 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_followup' });
       setIsTyping(false);
       processCrisisResult(result.crisisLevel);
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
-      speakText(result.text);
+      
+      let botText = result.text;
+      if (botText && botText.includes('Selesai Bercerita')) {
+        botText = botText.replace(/Selesai Bercerita/gi, '').trim();
+        setAiTriggeredEndSession(true);
+      }
+      
+      setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
+      speakText(botText);
       return;
     }
   };
@@ -576,31 +672,18 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       addBotMessage(`Oke, Kai dengerin sepenuhnya. Cerita aja semua yang kerasa berat, pelan-pelan ya. Kai di sini buat kamu. 💙`, 1000);
     } else {
       // mode === 'advice'
-      setPhase('listening');
-      setDiagnosticIndex(0);
-      let topicKey = category?.id;
-      if (!topicKey || topicKey === 'general') {
-        const subMap = { "Kecemasan/Stress": "psikologi", "Hubungan Sosial": "pertemanan", "Akademik/Karir": "karir", "Keluarga": "keluarga" };
-        topicKey = subMap[userData.subtopic] || 'general';
-      }
-      const questions = DIAGNOSTIC_QUESTIONS[topicKey] || DIAGNOSTIC_QUESTIONS.general;
+      setPhase('advice_exploration');
+      setExplorationCount(0);
       
       setIsTyping(true);
       setTimeout(() => {
         setMessages(prev => [...prev, {
           role: 'model',
-          parts: [{ text: `Wah, terima kasih banyak sudah mau berbagi cerita awal ini dengan Kai. Ceritamu penting banget. Supaya diskusinya jelas buat Kai dan enak buat kita urai satu per satu, Kai izin tanya beberapa hal pendek dulu, ya? Kita mulai dari...` }],
+          parts: [{ text: `Wah, terima kasih banyak sudah mau berbagi cerita awal ini dengan Kai. Ceritamu penting banget.\n\nSupaya saran Kai bisa lebih pas buat kamu, boleh ceritain sedikit bagian mana yang paling bikin kamu berat/bingung saat ini?` }],
           timestamp: new Date().toISOString()
         }]);
-        setTimeout(() => {
-          setIsTyping(false);
-          setMessages(prev => [...prev, {
-            role: 'model',
-            parts: [{ text: questions[0] }],
-            timestamp: new Date().toISOString()
-          }]);
-          speakText(questions[0]);
-        }, 2000);
+        speakText(`Wah, terima kasih banyak sudah mau berbagi cerita awal ini dengan Kai. Ceritamu penting banget. Supaya saran Kai bisa lebih pas buat kamu, boleh ceritain sedikit bagian mana yang paling bikin kamu berat atau bingung saat ini?`);
+        setIsTyping(false);
       }, 1000);
     }
   };
@@ -776,7 +859,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
 
     // SUBTOPIC: tampilkan tombol topik
     if (phase === 'subtopic') {
-      const topics = SUB_TOPICS[category?.id] || ['Lainnya'];
+      const topics = SUB_TOPICS[category?.id] || SUB_TOPICS.general;
       return (
         <div className="flex flex-wrap gap-2 justify-center p-2">
           {topics.map(t => (
@@ -829,22 +912,13 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       );
     }
 
-    // Input biasa (listening, venting, advice_followup)
-    const showEndButton = ['listening', 'advice_followup'].includes(phase) && messages.length >= 8;
+    // Input biasa (venting, advice_followup)
+    const showEndButton = (['venting', 'advice_followup'].includes(phase) && messages.length >= 8) || aiTriggeredEndSession;
     return (
       <div className="flex flex-col gap-2 w-full">
         {/* Quick starters saat initial hook */}
         {phase === 'initial_hook' && (
           <div className="flex flex-wrap gap-2 mb-2 justify-center">
-            {["Aku lagi sedih 😢", "Aku stres belajar 📚", "Aku butuh teman cerita 💬"].map(s => (
-              <button
-                key={s}
-                onClick={() => handleSendMessage(s)}
-                className="bg-violet-50 text-violet-600 px-4 py-2 rounded-full text-xs font-semibold hover:bg-violet-100 hover:scale-105 transition-all border border-violet-100 shadow-sm"
-              >
-                {s}
-              </button>
-            ))}
           </div>
         )}
 
@@ -961,7 +1035,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
   // ============================================================
   const phaseLabel = {
     initial_hook: 'Memulai', intake: 'Pendataan', subtopic: 'Pilih Topik',
-    listening: 'Mendengarkan', choice: 'Pilih Mode', venting: 'Curhat Bebas',
+    choice: 'Pilih Mode', venting: 'Curhat Bebas',
     advice_followup: 'Saran & Diskusi', finishing: 'Menyimpan', finished: 'Selesai'
   }[phase] || phase;
 
@@ -1033,7 +1107,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
       ) : (
         <div className="relative flex-1 flex flex-col min-h-0 border-x border-slate-100">
           {/* Floating End Session Button for Venting */}
-          {phase === 'venting' && messages.length > 12 && (
+          {phase === 'venting' && (messages.length > 12 || aiTriggeredEndSession) && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}

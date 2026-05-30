@@ -10,7 +10,7 @@ export function useChatSession({
   phase,
   messages,
   userData,
-  diagnosticIndex,
+  explorationCount,
   currentRiskLevel,
   detectedKeywords,
   categoryTitle,
@@ -29,7 +29,7 @@ export function useChatSession({
             phase: data.phase,
             messages: data.messages,
             userData: data.user_data || {},
-            diagnosticIndex: data.user_data?.diagnostic_index || 0,
+            explorationCount: data.user_data?.exploration_count || 0,
             currentRiskLevel: { level: data.current_risk_level || 'Rendah', priority: 1 },
             detectedKeywords: data.detected_keywords || [],
           });
@@ -47,7 +47,7 @@ export function useChatSession({
               phase: draft.phase || 'intake',
               messages: draft.messages || [],
               userData: draft.userData || {},
-              diagnosticIndex: draft.diagnosticIndex || 0,
+              explorationCount: draft.explorationCount || 0,
               currentRiskLevel: draft.currentRiskLevel || { level: 'Rendah', priority: 1 },
               detectedKeywords: draft.detectedKeywords || [],
             });
@@ -74,7 +74,7 @@ export function useChatSession({
         anonUserId,
         phase,
         messages,
-        user_data: { ...userData, diagnostic_index: diagnosticIndex },
+        user_data: { ...userData, exploration_count: explorationCount },
         category: categoryTitle,
         current_risk_level: currentRiskLevel.level,
         detected_keywords: detectedKeywords
@@ -95,7 +95,7 @@ export function useChatSession({
     autoSaveTimerRef.current = setInterval(saveDraft, 30000);
     return () => clearInterval(autoSaveTimerRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, messages, userData, diagnosticIndex, currentRiskLevel, detectedKeywords]);
+  }, [phase, messages, userData, explorationCount, currentRiskLevel, detectedKeywords]);
 
   const clearSession = async () => {
     localStorage.removeItem('kancahate_session_id');

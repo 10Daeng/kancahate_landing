@@ -34,6 +34,8 @@ import { Providers } from "@/components/Providers";
 import BottomNav from "@/components/shared/BottomNav";
 import { GoogleAnalytics } from '@next/third-parties/google';
 
+import AntiCloneWrapper from "@/components/AntiCloneWrapper";
+
 export default function RootLayout({ children }) {
   const schemaData = {
     "@context": "https://schema.org",
@@ -62,8 +64,10 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${plusJakartaSans.variable} ${plusJakartaSans.className} md:pb-0 pb-24`}>
         <Providers>
-          {children}
-          <BottomNav />
+          <AntiCloneWrapper>
+            {children}
+            <BottomNav />
+          </AntiCloneWrapper>
         </Providers>
       </body>
       <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || "G-3TMHXGZXB8"} />

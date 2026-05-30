@@ -3,6 +3,8 @@
 
 // Removed supabase import
 
+import 'server-only';
+
 /**
  * CONFIGURATION
  * Pilih embedding provider:
@@ -17,10 +19,10 @@ const EMBEDDING_CONFIG = {
     apiUrl: 'https://api.openai.com/v1/embeddings',
     model: 'text-embedding-3-small',
     dimension: 1536,
-    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || ''
+    apiKey: process.env.OPENAI_API_KEY || ''
   },
   google: {
-    apiUrl: `https://textembedding-gecko.googleapis.com/v1/models/textembedding-gecko@003:embed?key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY || ''}`,
+    apiUrl: `https://textembedding-gecko.googleapis.com/v1/models/textembedding-gecko@003:embed?key=${process.env.GOOGLE_API_KEY || ''}`,
     model: 'textembedding-gecko@003',
     dimension: 768
   },

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Phone, Heart, Instagram, Twitter } from 'lucide-react';
+import { Phone, Heart, Instagram, Twitter, Mail } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -50,6 +50,12 @@ export default function Footer() {
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <Twitter size={16} />
               </a>
+              <a href="mailto:halo@kancahate.my.id" className="w-9 h-9 rounded-xl flex items-center justify-center text-white/60 hover:text-white transition-all hover:-translate-y-0.5"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                title="Email Kami">
+                <Mail size={16} />
+              </a>
+              <span className="text-white/50 text-sm ml-2 hidden sm:inline-block">halo@kancahate.my.id</span>
             </div>
           </div>
 

@@ -18,7 +18,8 @@ async function deriveKey(password) {
   );
 
   // Use a static salt for consistency (in production, use unique salt per user)
-  const salt = encoder.encode('kancahate-salt-2024');
+  const saltText = process.env.NEXT_PUBLIC_CRYPTO_SALT || 'kancahate-salt-2024';
+  const salt = encoder.encode(saltText);
 
   return crypto.subtle.deriveKey(
     {
@@ -34,13 +35,15 @@ async function deriveKey(password) {
   );
 }
 
+const DEFAULT_KEY = process.env.NEXT_PUBLIC_CRYPTO_KEY || 'kancahate-default-key';
+
 /**
  * Encrypt data using AES-GCM
  * @param {string} data - Data to encrypt
  * @param {string} keyPassword - Password for encryption key
  * @returns {Promise<string>} - Encrypted data as base64 string (IV + ciphertext)
  */
-export async function encryptData(data, keyPassword = 'kancahate-default-key') {
+export async function encryptData(data, keyPassword = DEFAULT_KEY) {
   try {
     const key = await deriveKey(keyPassword);
     const encoder = new TextEncoder();
@@ -70,7 +73,7 @@ export async function encryptData(data, keyPassword = 'kancahate-default-key') {
  * @param {string} keyPassword - Password for decryption key
  * @returns {Promise<any>} - Decrypted data
  */
-export async function decryptData(encryptedData, keyPassword = 'kancahate-default-key') {
+export async function decryptData(encryptedData, keyPassword = DEFAULT_KEY) {
   try {
     if (!encryptedData) return null;
 

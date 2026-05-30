@@ -35,65 +35,7 @@ export const INTAKE_FLOW = [
   }
 ];
 
-// --- PERTANYAAN DIAGNOSTIK STANDAR (Hardcoded) ---
-// Pendekatan konseling teks: Bite-sized, eksplorasi, metafora cuaca, coping mekanis, dan klarifikasi emosi
-// Disusun seluwes mungkin meniru contoh
-export const DIAGNOSTIC_QUESTIONS = {
-  karir: [
-    "Pelan-pelan aja ya ceritanya. Apa sih yang paling bikin kamu bingung atau tertekan soal urusan karir belakangan ini?",
-    "Pasti capek banget mikirin masa depan. Waktu ngetik tadi, perasaan apa sih yang paling dominan? Cemas, takut salah langkah, atau ngerasa stuck?",
-    "Kalau lagi mumet banget mikirin soal kerjaan atau masa depan gini, biasanya kamu ngapain biar pikirannya agak rileks?",
-    "Ada nggak sih orang terdekat yang biasanya kamu ajak diskusi atau sekadar dengerin keluh kesahmu soal ini?",
-  ],
-  pendidikan: [
-    "Santai aja ya ceritanya. Apa sih dari sekolah atau kuliah yang belakangan ini paling menguras energimu?",
-    "Wajar kalau kerasa capek. Waktu kamu cerita barusan, perasaan apa yang paling kuat muncul? Sedih, ngerasa ditekan, atau kewalahan?",
-    "Kalau tugas atau tekanan belajar udah kerasa terlalu numpuk, biasanya kamu cari pelarian ke mana buat sekadar napas sebentar?",
-    "Ada nggak sih teman seperjuangan atau sosok lain yang bisa diajak curhat kalau kamu lagi pusing begini?",
-  ],
-  psikologi: [
-    "Pelan-pelan aja ya... Hal apa sih yang belakangan ini kerasa paling mengganjal atau bikin hatimu nggak tenang?",
-    "Pasti nggak mudah ya ngerasain ini sendirian. Waktu ngetik tadi, perasaan apa yang paling mendominasi? Hampa, cemas berlebih, atau sedih yang susah dijelasin?",
-    "Kalau lagi ngerasa bener-bener down atau kalut, hal kecil apa yang biasanya bisa bikin kamu ngerasa sedikit lebih aman?",
-    "Ada nggak sih seseorang yang benar-benar kamu rasa aman buat diajak ngobrol tanpa takut dihakimi?",
-  ],
-  keluarga: [
-    "Boleh cerita pelan-pelan, situasi apa sih di rumah yang akhir-akhir ini paling bikin batinmu lelah?",
-    "Pasti berat ya kalau sumber capeknya dari orang terdekat. Waktu cerita ini, rasanya lebih ke sedih, kecewa, atau marah karena nggak didengar?",
-    "Kalau suasana rumah lagi bener-bener sumpek, biasanya kamu ngapain buat cari ketenangan sendiri?",
-    "Di luar orang rumah, ada nggak sih sosok yang bisa jadi tempat sandaranmu kalau kepala udah ruwet banget?",
-  ],
-  pertemanan: [
-    "Pelan-pelan aja ya ceritanya. Apa sih soal pertemananmu yang belakangan ini bikin hatimu kerasa nggak nyaman?",
-    "Kecewa sama teman emang rasanya nggak enak banget. Perasaan apa yang paling kuat sekarang? Sedih, ngerasa dikhianati, atau merasa sendirian?",
-    "Kalau lagi kepikiran banget soal temen-temen ini, biasanya kamu sibuk ngapain biar nggak terlalu overthinking?",
-    "Selain lingkungan yang lagi bermasalah ini, masih ada nggak sih orang lain yang bisa kamu percaya buat cerita?",
-  ],
-  cinta: [
-    "Boleh cerita pelan-pelan, hal apa soal hubungan asmaramu yang belakangan ini kerasa paling mengganjal?",
-    "Pasti capek ya kalau soal hati lagi nggak baik-baik aja. Waktu kamu cerita ini, rasanya lebih ke patah hati, kecewa, atau masih ada rasa ragu?",
-    "Kalau lagi galau banget atau kepikiran dia, biasanya kamu ngapain biar perasaannya agak mendingan?",
-    "Ada nggak sih sahabat atau circle pertemanan yang biasanya selalu siap dengerin curhatanmu soal cinta?",
-  ],
-  agama: [
-    "Pelan-pelan aja ya ceritanya. Apa sih soal keyakinan atau ibadah yang belakangan ini bikin hatimu bergejolak atau ragu?",
-    "Wajar kok kadang merasa bingung. Waktu ngetik tadi, perasaan apa yang paling dominan? Rasa bersalah, takut salah, atau merasa jauh?",
-    "Kalau lagi butuh banget ketenangan batin yang 'adem', hal apa yang biasanya kamu lakuin?",
-    "Ada nggak sih sosok bijak yang menurutmu aman dan terbuka buat diajak diskusi soal hal sensitif ini tanpa langsung nge-judge?",
-  ],
-  medsos: [
-    "Boleh cerita pelan-pelan, hal apa sih dari sosmed yang belakangan ini sering bikin kamu ngerasa capek mental?",
-    "Sering liat layar emang bisa bikin pusing hati. Waktu cerita ini, rasanya lebih ke iri (insecure), cemas karena FOMO, atau merasa kurang cukup?",
-    "Kalau udah ngerasa mumet banget lihat postingan orang, biasanya kamu ngapain biar bisa lepas sebentar dari HP?",
-    "Di dunia nyata, ada nggak sih sosok yang bikin kamu ngerasa diterima apa adanya tanpa perlu mikirin 'image' medsos?",
-  ],
-  general: [
-    "Apa nih yang bikin kamu mutusin buat chat hari ini? Cerita pelan-pelan aja ya, aku di sini dengerin kok.",
-    "Pasti capek ya memendam itu semua. Waktu kamu ngetik barusan, perasaan apa yang paling kuat muncul? Sedih, marah, takut, atau bingung?",
-    "Kalau lagi ngerasa bener-bener drop atau mumet, hal kecil apa yang biasanya bisa bantu naikin mood kamu sedikit?",
-    "Ada nggak sih sosok di sekitarmu yang biasanya nyaman diajak ngobrol kalau keadaan lagi seberat ini?",
-  ],
-};
+
 
 // --- KONTEN EDUKATIF & QUOTE (Muncul di jeda sebelum menawarkan pilihan) ---
 // Dipilih sesuai kategori untuk mengisi jeda saat AI memproses
@@ -155,7 +97,23 @@ export const SUB_TOPICS = {
   agama: ["Krisis Iman", "Rasa Bersalah", "Tekanan Sosial", "Lainnya"],
   cinta: ["Patah Hati", "Toxic Relationship", "LDR", "Dijodohkan", "Orientasi Seksual", "Lainnya"],
   medsos: ["Kecanduan Gadget", "FOMO", "Insecure karena Sosmed", "Cyberbullying", "Lainnya"],
-  general: ["Kecemasan/Stress", "Hubungan Sosial", "Akademik/Karir", "Keluarga", "Lainnya"]
+  general: [
+    "Keluarga & Orang Tua",
+    "Diri Sendiri (Overthinking & Emosi)",
+    "Pertemanan & Lingkungan",
+    "Asmara & Perasaan",
+    "Sekolah & Masa Depan",
+    "Lainnya / Mau ketik sendiri"
+  ]
+};
+
+export const SUBTOPIC_VALIDATION_MESSAGES = {
+  "Keluarga & Orang Tua": "Ngomongin soal keluarga memang kadang bikin campur aduk, ya. Kadang sayang banget, tapi kadang juga bikin dada sesak. Pelan-pelan ya ceritanya...",
+  "Diri Sendiri (Overthinking & Emosi)": "Berhadapan dengan pikiran dan emosi sendiri kadang rasanya seperti perang yang nggak berkesudahan ya. Pelan-pelan kita urai sama-sama.",
+  "Pertemanan & Lingkungan": "Masalah pertemanan itu sering kali terasa berat banget karena wajar kita pengen merasa diterima. Aku di sini untuk dengerin kamu.",
+  "Asmara & Perasaan": "Urusan hati memang bisa bikin dunia serasa naik roller coaster. Wajar kok kalau kamu ngerasa pusing atau sedih.",
+  "Sekolah & Masa Depan": "Tekanan sekolah dan mikirin masa depan emang bisa bikin dada sesak dan kepala pusing. Ingat, kamu udah berjuang keras sejauh ini.",
+  "Lainnya / Mau ketik sendiri": "Kadang perasaan itu campur aduk dan susah dikasih label. Nggak apa-apa, Kai siap dengerin apa pun yang mau kamu sampein."
 };
 
 // --- PERSONA OPTIONS ---

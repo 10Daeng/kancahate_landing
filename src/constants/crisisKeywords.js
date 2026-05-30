@@ -18,7 +18,7 @@ export const CRISIS_KEYWORDS = {
     priority: 2
   },
   low: {
-    keywords: ['sedih', 'cemas', 'takut', 'khawatir', 'stres', 'galau', 'bingung', 'overwhelmed'],
+    keywords: ['cemas', 'takut', 'khawatir', 'stres', 'galau', 'bingung', 'overwhelmed'],
     level: 'Rendah',
     priority: 1
   }

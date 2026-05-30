@@ -9,6 +9,32 @@ import { NextResponse } from 'next/server';
 import { buildSystemPrompt, sanitizeChatHistory } from '@/lib/chatEngine';
 import { detectCrisisLevel } from '@/lib/crisisDetection';
 
+// Simple in-memory rate limiter (15 requests per 60 seconds)
+const rateLimitMap = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  const limit = 15;
+
+  if (!rateLimitMap.has(ip)) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  const record = rateLimitMap.get(ip);
+  if (now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  if (record.count >= limit) {
+    return false;
+  }
+
+  record.count += 1;
+  return true;
+}
+
 // Model fallback chain
 const MODEL_CONFIGS = [
   { model: 'gemini-2.5-flash-lite', endpoint: 'v1beta' },
@@ -188,11 +214,36 @@ async function callGroqFallback(history, systemPrompt) {
  */
 export async function POST(request) {
   try {
+    // 1. Basic Rate Limiting
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    if (ip !== 'unknown' && !checkRateLimit(ip)) {
+      return NextResponse.json({ error: 'Too many requests. Please slow down.', text: 'Slow down ya! Kai perlu waktu buat proses. Tunggu sebentar 🙏', isError: true }, { status: 429 });
+    }
+
+    // 2. CSRF/Origin Check
+    const origin = request.headers.get('origin');
+    const allowedOrigins = [
+      process.env.NEXT_PUBLIC_APP_URL, 
+      'http://localhost:3000', 
+      'https://kancahate.my.id'
+    ];
+    if (origin && !allowedOrigins.some(allowed => allowed && (origin.includes(allowed) || allowed.includes(origin)))) {
+      console.warn(`[Chat API] Unauthorized origin: ${origin}`);
+      return NextResponse.json({ error: 'Unauthorized origin' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { history, userData, category, currentRiskLevel, mode, action = 'chat' } = body;
 
     if (!history || !Array.isArray(history)) {
       return NextResponse.json({ error: 'Invalid request: history required' }, { status: 400 });
+    }
+
+    // 3. Input Length Validation (max 2000 chars per message)
+    for (const msg of history) {
+      if (msg.parts?.[0]?.text && msg.parts[0].text.length > 2000) {
+        return NextResponse.json({ error: 'Message too long. Maximum 2000 characters.', text: 'Pesanmu kepanjangan nih. Bisa dipotong sedikit biar Kai gampang bacanya?', isError: true }, { status: 400 });
+      }
     }
 
     // --- Deteksi krisis pada pesan terakhir user (server-side) ---

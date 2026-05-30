@@ -3,10 +3,11 @@
 // Pengganti Supabase Client untuk koneksi langsung ke PostgreSQL
 // =============================================
 
+import 'server-only';
 import { neon } from '@neondatabase/serverless';
 
 // Database connection string (server-side only!)
-const databaseUrl = process.env.DATABASE_URL || process.env.NEXT_PUBLIC_NEON_DATABASE_URL;
+const databaseUrl = process.env.DATABASE_URL;
 
 // Neon serverless driver - lazy initialization to be safe on client-side
 let _sql = null;
@@ -47,7 +48,7 @@ export async function getUserByToken(token) {
   const jwt = await import('jsonwebtoken');
 
   try {
-    const JWT_SECRET = process.env.NEXT_PUBLIC_JWT_SECRET || 'change-this-in-production-min-32-chars';
+    const JWT_SECRET = process.env.JWT_SECRET || 'change-this-in-production-min-32-chars';
     const decoded = jwt.verify(token, JWT_SECRET);
 
     const result = await sql`

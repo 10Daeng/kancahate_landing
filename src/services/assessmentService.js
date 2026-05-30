@@ -1,7 +1,7 @@
 // --- ASSESSMENT RESULT SERVICE ---
 // Handles saving and retrieving assessment results using Neon.tech database
 
-import { sql, getUserByToken } from '@/lib/db';
+// Removed db.js import since this file runs on the client.
 
 /**
  * Check auth token from cookie
@@ -27,15 +27,20 @@ export async function checkAuthStatus() {
       return { isLoggedIn: false, requiresLogin: true };
     }
 
-    const user = await getUserByToken(token);
+    const response = await fetch('/api/auth/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
 
-    if (!user) {
+    if (!response.ok) {
       return { isLoggedIn: false, requiresLogin: true };
     }
 
+    const data = await response.json();
     return {
       isLoggedIn: true,
-      user
+      user: data.user
     };
   } catch (error) {
     console.error('Error checking auth status:', error);
@@ -55,27 +60,11 @@ export async function saveAssessmentResult(testType, result) {
     const token = getAuthToken();
 
     if (!token) {
-      // Not logged in, but we now SAVE TO DB as Anonymous!
       console.log('No auth token, saving as anonymous to DB');
     }
 
-    let user = null;
-    if (token) {
-      user = await getUserByToken(token);
-    }
-
-    // Prepare data for database
-    const assessmentData = {
-      user_id: user ? user.id : null,
-      anon_user_id: result.anonUserId || null,
-      email: user ? user.email : 'anonymous@kancahate.my.id',
-      scores: result.scores || result.totalScore || null,
-      test_type: testType,
-      completed_at: new Date().toISOString()
-    };
-
-    // Save to database
-    const dbResult = await saveAssessmentResultDB(assessmentData.user_id, testType, result, assessmentData);
+    // Save to database via API
+    const dbResult = await saveAssessmentResultDB(testType, result);
 
     return { success: true, data: dbResult, savedLocally: false };
 
@@ -95,14 +84,31 @@ export async function saveAssessmentResult(testType, result) {
 /**
  * Save assessment result directly to database
  */
-async function saveAssessmentResultDB(userId, testType, result, assessmentData) {
-  const dbResult = await sql`
-    INSERT INTO assessment_results (user_id, anon_user_id, email, assessment_type, scores, result_data, created_at)
-    VALUES (${userId}, ${assessmentData.anon_user_id}, ${assessmentData.email}, ${testType}, ${JSON.stringify(assessmentData.scores)}, ${JSON.stringify(result)}, NOW())
-    RETURNING id, created_at as completed_at
-  `;
+async function saveAssessmentResultDB(testType, result) {
+  const token = getAuthToken();
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
-  return dbResult[0];
+  const response = await fetch('/api/assessments', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      testType,
+      result,
+      anonUserId: result.anonUserId || null
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to save assessment to database');
+  }
+
+  return response.json();
 }
 
 /**
@@ -157,17 +163,8 @@ export async function retrySaveToDatabase(localId) {
       return { success: false, message: 'Data tidak ditemukan di perangkat' };
     }
 
-    // Prepare data for database
-    const assessmentData = {
-      user_id: user.id,
-      email: user.email,
-      scores: resultToSync.result.scores || resultToSync.result.totalScore || null,
-      test_type: resultToSync.test_type,
-      completed_at: resultToSync.test_date || new Date().toISOString()
-    };
-
     // Try to save to database
-    await saveAssessmentResultDB(user.id, resultToSync.test_type, resultToSync.result, assessmentData);
+    await saveAssessmentResultDB(resultToSync.test_type, resultToSync.result);
 
     // Remove from local storage on success
     const updatedResults = localResults.filter(r => r.id !== localId);
@@ -255,17 +252,16 @@ export async function getAssessmentResults() {
       return JSON.parse(localStorage.getItem('kancahate_assessment_results') || '[]');
     }
 
-    // Get results from database (Single Table)
+    // Get results from database API
     const allResults = [];
     try {
-      const result = await sql`
-        SELECT id, email, assessment_type as test_type, scores, result_data as result, created_at as completed_at
-        FROM assessment_results
-        WHERE user_id = ${user.id}
-        ORDER BY created_at DESC
-      `;
-
-      if (result) {
+      const response = await fetch('/api/assessments', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const result = await response.json();
         allResults.push(...result);
       }
     } catch (e) {
@@ -321,17 +317,18 @@ export async function deleteAssessmentResult(resultId) {
       return { success: false, error: 'Sesi habis' };
     }
 
-    // Delete from single table
+    // Delete from API
     let deleted = false;
     try {
-      const result = await sql`
-        DELETE FROM assessment_results
-        WHERE id = ${sql.safe(resultId)}
-        AND user_id = ${user.id}
-      `;
-      if (result) deleted = true;
+      const response = await fetch(`/api/assessments?id=${encodeURIComponent(resultId)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) deleted = true;
     } catch (e) {
-      console.error('Error deleting from assessment_results:', e);
+      console.error('Error deleting from assessment_results API:', e);
     }
 
     if (deleted) {

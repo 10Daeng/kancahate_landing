@@ -12,6 +12,27 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   turbopack: {}, // Silence Turbopack warning
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY', // Prevents the site from being framed
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'none';", // Modern equivalent of X-Frame-Options
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff', // Prevents MIME-sniffing
+          }
+        ],
+      },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);

@@ -1,6 +1,7 @@
 // --- GEMINI API SERVICE ---
 // Handles all communication with Google Gemini API
 
+import 'server-only';
 import { sanitizeMessage, anonymizeUserData } from './cryptoService';
 
 /**
@@ -57,7 +58,7 @@ function sanitizeChatHistory(history) {
  * @returns {Promise<string>} - AI response text
  */
 export async function callGeminiAPI(history, systemPrompt, maxRetries = 3, userName = 'kawan') {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === 'your_api_key_here') {
     return `Maaf sekali, ${userName}, Kai sedang istirahat sejenak. Silakan coba lagi beberapa saat ya.`;
@@ -185,7 +186,7 @@ export async function callGeminiAPI(history, systemPrompt, maxRetries = 3, userN
  * @returns {Promise<{valid: boolean, feedback: string}>}
  */
 export async function validateAnswer(question, answer, phase) {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   
   if (!apiKey || apiKey === 'your_api_key_here') {
     return { valid: true, feedback: "" };
