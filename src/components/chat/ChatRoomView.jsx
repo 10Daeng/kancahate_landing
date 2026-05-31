@@ -190,6 +190,23 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     return () => clearTimeout(crisisTimeout);
   }, [phase, sessionId, detectedKeywords, category, chatMode]);
 
+  // --- Hooks ---
+  const {
+    isListening, isTTSEnabled, setIsTTSEnabled,
+    speechSupported, startListening, stopListening, speakText
+  } = useSpeech();
+
+  // --- Helper: tambah pesan bot ---
+  const addBotMessage = useCallback((text, delay = 800) => {
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      const msg = { role: 'model', parts: [{ text }], timestamp: new Date().toISOString() };
+      setMessages(prev => [...prev, msg]);
+      speakText(text);
+    }, delay);
+  }, [speakText]);
+
   const clearIdleTimers = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     if (promptEndTimerRef.current) clearTimeout(promptEndTimerRef.current);
@@ -213,11 +230,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     return clearIdleTimers;
   }, [messages, phase, resetIdleTimer, clearIdleTimers]);
 
-  // --- Hooks ---
-  const {
-    isListening, isTTSEnabled, setIsTTSEnabled,
-    speechSupported, startListening, stopListening, speakText
-  } = useSpeech();
+
 
   const { clearSession } = useChatSession({
     sessionId,
@@ -287,16 +300,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  // --- Helper: tambah pesan bot ---
-  const addBotMessage = useCallback((text, delay = 800) => {
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const msg = { role: 'model', parts: [{ text }], timestamp: new Date().toISOString() };
-      setMessages(prev => [...prev, msg]);
-      speakText(text);
-    }, delay);
-  }, [speakText]);
+
 
   const triggerEmergencyHalt = useCallback(() => {
     setPhase('halt');
