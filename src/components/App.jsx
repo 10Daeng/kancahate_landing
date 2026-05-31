@@ -20,21 +20,26 @@ import {
 } from 'lucide-react';
 
 import { useSearchParams } from 'next/navigation';
-import ChatRoomView from './chat/ChatRoomView';
-import ChatModal from './chat/ChatModal';
+import dynamic from 'next/dynamic';
 import Header from './shared/Header';
 import Footer from './shared/Footer';
 import HeroChatMockup from './HeroChatMockup';
-import BigFiveView from './assessments/BigFiveView';
-import MBTIView from './assessments/MBTIView';
-import PSS10View from './assessments/PSS10View';
-import GAD7View from './assessments/GAD7View';
-import RIASECView from './assessments/RIASECView';
-import PHQ9View from './assessments/PHQ9View';
-import RosenbergView from './assessments/RosenbergView';
-import VARKView from './assessments/VARKView';
-import MultipleIntelligenceView from './assessments/MultipleIntelligenceView';
-import LoveLanguagesView from './assessments/LoveLanguagesView';
+
+// --- Dynamic imports to prevent webpack TDZ (Temporal Dead Zone) errors ---
+// These components are loaded lazily to break synchronous initialization chains
+// and also improve initial page load performance via code-splitting.
+const ChatRoomView = dynamic(() => import('./chat/ChatRoomView'), { ssr: false });
+const ChatModal = dynamic(() => import('./chat/ChatModal'), { ssr: false });
+const BigFiveView = dynamic(() => import('./assessments/BigFiveView'), { ssr: false });
+const MBTIView = dynamic(() => import('./assessments/MBTIView'), { ssr: false });
+const PSS10View = dynamic(() => import('./assessments/PSS10View'), { ssr: false });
+const GAD7View = dynamic(() => import('./assessments/GAD7View'), { ssr: false });
+const RIASECView = dynamic(() => import('./assessments/RIASECView'), { ssr: false });
+const PHQ9View = dynamic(() => import('./assessments/PHQ9View'), { ssr: false });
+const RosenbergView = dynamic(() => import('./assessments/RosenbergView'), { ssr: false });
+const VARKView = dynamic(() => import('./assessments/VARKView'), { ssr: false });
+const MultipleIntelligenceView = dynamic(() => import('./assessments/MultipleIntelligenceView'), { ssr: false });
+const LoveLanguagesView = dynamic(() => import('./assessments/LoveLanguagesView'), { ssr: false });
 
 // Testimonial Data
 const testimonials = [
