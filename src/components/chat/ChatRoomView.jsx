@@ -69,21 +69,29 @@ export default function ChatRoomView({ category, onBack, initialData }) {
   // --- Session & Anon ID ---
   const [sessionId] = useState(() => {
     if (initialData?.resumeDbSessionId) return `session_${Date.now()}_resume_${initialData.resumeDbSessionId}`;
-    let id = localStorage.getItem('kancahate_session_id');
-    if (!id) {
-      id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('kancahate_session_id', id);
+    try {
+      let id = localStorage.getItem('kancahate_session_id');
+      if (!id) {
+        id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('kancahate_session_id', id);
+      }
+      return id;
+    } catch (e) {
+      return `session_${Date.now()}_fallback_` + Math.random().toString(36).substr(2, 9);
     }
-    return id;
   });
 
   const [anonUserId] = useState(() => {
-    let id = localStorage.getItem('kancahate_anon_id');
-    if (!id) {
-      id = `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('kancahate_anon_id', id);
+    try {
+      let id = localStorage.getItem('kancahate_anon_id');
+      if (!id) {
+        id = `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('kancahate_anon_id', id);
+      }
+      return id;
+    } catch (e) {
+      return `anon_${Date.now()}_fallback_` + Math.random().toString(36).substr(2, 9);
     }
-    return id;
   });
 
   // --- Core State ---
