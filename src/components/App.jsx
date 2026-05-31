@@ -208,16 +208,19 @@ function TestimonialSection() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [ref, inView] = useScrollReveal();
 
-  const getItemsPerSlide = () => {
-    if (typeof window !== 'undefined') {
-      if (window.innerWidth >= 1024) return 3;
-      if (window.innerWidth >= 768) return 2;
-      return 1;
-    }
-    return 3;
-  };
+  const [itemsPerSlide, setItemsPerSlide] = useState(3);
 
-  const itemsPerSlide = getItemsPerSlide();
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setItemsPerSlide(3);
+      else if (window.innerWidth >= 768) setItemsPerSlide(2);
+      else setItemsPerSlide(1);
+    };
+    handleResize(); // Set immediately on mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const totalSlides = Math.ceil(testimonials.length / itemsPerSlide);
 
   useEffect(() => {
