@@ -997,7 +997,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
               {icon}
               <span>{msg.eduType === 'quote' ? 'Kutipan' : msg.eduType === 'tip' ? 'Tips' : 'Fakta Menarik'}</span>
             </div>
-            <p className="leading-relaxed italic">{msg.parts[0].text}</p>
+            <p className="leading-relaxed italic">{msg.parts ? msg.parts[0].text : msg.text}</p>
             <span className="text-[10px] text-slate-400 mt-1 block text-right">{time}</span>
           </div>
         </motion.div>
@@ -1022,7 +1022,7 @@ export default function ChatRoomView({ category, onBack, initialData }) {
               ? 'bg-white text-slate-700 border border-slate-100 rounded-tl-sm'
               : 'bg-violet-600 text-white rounded-tr-sm'
           }`}>
-            {msg.parts[0].text}
+            {msg.parts ? msg.parts[0].text : msg.text}
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5 px-1">{time}</span>
         </div>
