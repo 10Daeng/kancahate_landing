@@ -25,7 +25,16 @@ import ChatModal from './chat/ChatModal';
 import Header from './shared/Header';
 import Footer from './shared/Footer';
 import HeroChatMockup from './HeroChatMockup';
-import { BigFiveView, MBTIView, PSS10View, GAD7View, RIASECView, PHQ9View, RosenbergView, VARKView, MultipleIntelligenceView, LoveLanguagesView } from './assessments';
+import BigFiveView from './assessments/BigFiveView';
+import MBTIView from './assessments/MBTIView';
+import PSS10View from './assessments/PSS10View';
+import GAD7View from './assessments/GAD7View';
+import RIASECView from './assessments/RIASECView';
+import PHQ9View from './assessments/PHQ9View';
+import RosenbergView from './assessments/RosenbergView';
+import VARKView from './assessments/VARKView';
+import MultipleIntelligenceView from './assessments/MultipleIntelligenceView';
+import LoveLanguagesView from './assessments/LoveLanguagesView';
 
 // Testimonial Data
 const testimonials = [
