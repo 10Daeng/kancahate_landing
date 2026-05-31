@@ -1,6 +1,6 @@
 // =============================================
--- DIZELLE ORM SCHEMA UNTUK NEON TECH
--- =============================================
+// DIZELLE ORM SCHEMA UNTUK NEON TECH
+// =============================================
 
 import { uuid, text, integer, boolean, timestamp, jsonb } from 'drizzle-orm';
 
