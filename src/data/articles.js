@@ -466,7 +466,7 @@ export const articles = [
   },
   {
     id: 6,
-    slug: ' komunikasi-efektif-dengan-orang-tua',
+    slug: 'komunikasi-efektif-dengan-orang-tua',
     title: 'Nggak Paham dengan Orang Tua? Tips Komunikasi yang Efektif',
     excerpt: 'Merasa orang tua nggak ngerti kamu? Sering cekcok karena beda pemikiran? Belajar cara komunikasi yang bisa bikin hubungan kalian lebih baik.',
     content: `
