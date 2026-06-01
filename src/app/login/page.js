@@ -10,6 +10,15 @@ import { signIn, getSession } from 'next-auth/react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { checkIsAdmin } from '@/app/admin/actions';
 
+// Greeting dinamis berdasarkan waktu lokal
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12)  return { emoji: '🌅', kata: 'Pagi ini,' };
+  if (hour >= 12 && hour < 15) return { emoji: '☀️',  kata: 'Siang ini,' };
+  if (hour >= 15 && hour < 18) return { emoji: '🌆', kata: 'Sore ini,' };
+  return                               { emoji: '🌙', kata: 'Malam ini,' };
+}
+
 // Floating emoji decoration
 function FloatingEmoji({ emoji, style }) {
   return (
@@ -205,18 +214,22 @@ export default function LoginPage() {
           </div>
 
           <div className="max-w-sm">
-            <div className="text-5xl mb-6">🌙</div>
-            <h2 className="text-4xl font-black leading-tight mb-5">
-              Malam ini,<br />kamu nggak perlu<br />
+            {(() => { const g = getGreeting(); return (
+              <>
+                <div className="text-5xl mb-6">{g.emoji}</div>
+                <h2 className="text-4xl font-black leading-tight mb-5">
+                  {g.kata}<br />kamu nggak perlu<br />
               <span style={{
                 background: 'linear-gradient(135deg, #C084FC, #F9A8D4)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text'
               }}>
-                sendirian.
-              </span>
-            </h2>
+                    sendirian.
+                  </span>
+                </h2>
+              </>
+            ); })()}
             <p className="text-white/65 font-medium leading-relaxed">
               Bergabung dan dapatkan teman cerita, tes kepribadian, dan ruang aman untuk tumbuh.
             </p>
