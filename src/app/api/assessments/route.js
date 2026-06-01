@@ -18,7 +18,7 @@ export async function GET(request) {
     }
 
     const result = await sql`
-      SELECT id, email, assessment_type as test_type, scores, result_data as result, created_at as completed_at
+      SELECT id, email, assessment_type as test_type, score, severity, result_data as result, created_at as completed_at
       FROM assessment_results
       WHERE user_id = ${user.id}
       ORDER BY created_at DESC
@@ -37,17 +37,38 @@ export async function POST(request) {
     const body = await request.json();
     const { testType, result, anonUserId } = body;
 
+    // Ekstrak nilai numerik dan severity dari objek result
+    // PHQ9/GAD7/Rosenberg: result.score (number) + result.severity (string)
+    // RIASEC/MBTI/dll: result.totalScore atau tidak ada score tunggal
+    const numericScore =
+      typeof result.score === 'number'
+        ? result.score
+        : typeof result.totalScore === 'number'
+        ? result.totalScore
+        : null;
+
+    const severity = result.severity || null;
+
     const assessmentData = {
       user_id: user ? user.id : null,
       anon_user_id: anonUserId || null,
       email: user ? user.email : 'anonymous@kancahate.my.id',
-      scores: result.scores || result.totalScore || null,
-      test_type: testType
     };
 
+    // Kolom yang ada di migration: score (integer), severity (varchar), result_data (jsonb)
+    // TIDAK ada kolom 'scores' (plural) — itu yang menyebabkan INSERT gagal sebelumnya
     const dbResult = await sql`
-      INSERT INTO assessment_results (user_id, anon_user_id, email, assessment_type, scores, result_data, created_at)
-      VALUES (${assessmentData.user_id}, ${assessmentData.anon_user_id}, ${assessmentData.email}, ${testType}, ${JSON.stringify(assessmentData.scores)}, ${JSON.stringify(result)}, NOW())
+      INSERT INTO assessment_results (user_id, anon_user_id, email, assessment_type, score, severity, result_data, created_at)
+      VALUES (
+        ${assessmentData.user_id},
+        ${assessmentData.anon_user_id},
+        ${assessmentData.email},
+        ${testType},
+        ${numericScore},
+        ${severity},
+        ${JSON.stringify(result)},
+        NOW()
+      )
       RETURNING id, created_at as completed_at
     `;
 
@@ -56,6 +77,7 @@ export async function POST(request) {
     console.error('Error in POST /api/assessments:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+
 }
 
 export async function DELETE(request) {

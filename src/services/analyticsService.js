@@ -4,7 +4,8 @@ import { db } from '@/db';
 import * as schema from '@/db/schema';
 import { eq, desc, sql } from 'drizzle-orm';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
+
 
 export async function getSocialProof() {
   try {

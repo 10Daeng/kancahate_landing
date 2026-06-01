@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, timestamp, boolean, jsonb, integer, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, timestamp, boolean, jsonb, integer, uuid, primaryKey } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -13,6 +13,8 @@ export const users = pgTable('users', {
   verificationToken: varchar('verification_token', { length: 255 }),
   otpCode: varchar('otp_code', { length: 10 }),
   otpExpires: timestamp('otp_expires'),
+  resetPasswordToken: varchar('reset_password_token', { length: 255 }),
+  resetPasswordExpires: timestamp('reset_password_expires'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -136,7 +138,62 @@ export const adminUsers = pgTable('admin_users', {
   id: serial('id').primaryKey(),
   userId: uuid('user_id'),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  name: varchar('name', { length: 255 }),
   role: varchar('role', { length: 50 }).default('admin'),
   isActive: boolean('is_active').default(true),
+  banned: boolean('banned').default(false),
+  banReason: text('ban_reason'),
+  bannedAt: timestamp('banned_at'),
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// ==========================================
+// NextAuth / Drizzle Adapter Required Tables
+// ==========================================
+
+export const accounts = pgTable(
+  'accounts',
+  {
+    userId: uuid('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('providerAccountId').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
+  },
+  (account) => ({
+    // Using simple uniqueIndex since compound primaryKey might conflict with some Drizzle versions
+    // or just define primary key on provider + providerAccountId
+    compoundKey: primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+  })
+);
+
+export const sessions = pgTable('sessions', {
+  sessionToken: text('sessionToken').primaryKey(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expires: timestamp('expires', { mode: 'date' }).notNull(),
+});
+
+export const verificationTokens = pgTable(
+  'verificationTokens',
+  {
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull(),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
+  },
+  (vt) => ({
+    compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
+  })
+);

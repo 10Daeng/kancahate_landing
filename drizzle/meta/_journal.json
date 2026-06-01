@@ -8,6 +8,13 @@
       "when": 1780074431545,
       "tag": "0000_misty_exodus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780317867210,
+      "tag": "0001_real_silver_sable",
+      "breakpoints": true
     }
   ]
 }

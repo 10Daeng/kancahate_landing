@@ -12,6 +12,7 @@ const withPWA = withPWAInit({
 const nextConfig = {
   reactStrictMode: true,
   turbopack: {}, // Silence Turbopack warning
+
   async headers() {
     return [
       {
@@ -19,20 +20,21 @@ const nextConfig = {
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'DENY', // Prevents the site from being framed
+            value: 'DENY',
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'none';", // Modern equivalent of X-Frame-Options
+            value: "frame-ancestors 'none';",
           },
           {
             key: 'X-Content-Type-Options',
-            value: 'nosniff', // Prevents MIME-sniffing
+            value: 'nosniff',
           }
         ],
       },
     ];
   },
 };
+
 
 export default withPWA(nextConfig);
