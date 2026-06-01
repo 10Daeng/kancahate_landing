@@ -44,6 +44,25 @@ const BULLYING_SUB_TYPES = [
   { id: 'siber', label: 'Siber', description: 'Pelecehan via media sosial, pesan, penyebaran konten' },
 ];
 
+const PERSON_STATUSES = [
+  { id: 'siswa_internal', label: 'Siswa Satu Sekolah' },
+  { id: 'siswa_luar', label: 'Siswa Sekolah Lain' },
+  { id: 'guru_staf', label: 'Guru / Staf' },
+  { id: 'masyarakat', label: 'Masyarakat Umum' },
+  { id: 'keluarga', label: 'Orang Tua / Keluarga' },
+  { id: 'lainnya', label: 'Lainnya' },
+];
+
+const VICTIM_RELATIONS = [
+  { id: 'teman_sekelas', label: 'Teman Sekelas' },
+  { id: 'senior_junior', label: 'Senior / Adik Kelas' },
+  { id: 'orang_tua', label: 'Orang Tua' },
+  { id: 'keluarga', label: 'Keluarga' },
+  { id: 'kenalan_sosmed', label: 'Kenalan Sosmed' },
+  { id: 'orang_asing', label: 'Orang Asing / Tidak Dikenal' },
+  { id: 'lainnya', label: 'Lainnya' },
+];
+
 const EVIDENCE_TYPES = [
   { id: 'foto', label: 'Foto', icon: Camera },
   { id: 'video', label: 'Video', icon: Camera },
@@ -122,8 +141,8 @@ export default function LaporanKejadianPage() {
     reporterEmail: '',
     isAnonymous: false,
 
-    perpetrators: [{ name: '', kelas: '', description: '' }],
-    victims: [{ name: '', kelas: '', relation: '' }],
+    perpetrators: [{ name: '', status: 'siswa_internal', kelas: '', description: '' }],
+    victims: [{ name: '', status: 'siswa_internal', kelas: '', relation: '' }],
 
     incidentType: '',
     bullyingTypes: [],
@@ -267,7 +286,7 @@ export default function LaporanKejadianPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
-                onClick={() => { setSubmitted(false); setStep(1); setForm({ reporterName:'', reporterStatus:'', reporterPhone:'', reporterEmail:'', isAnonymous:false, perpetrators:[{name:'',kelas:'',description:''}], victims:[{name:'',kelas:'',relation:''}], incidentType:'', bullyingTypes:[], location:'', incidentDate:'', incidentTime:'', chronology:'', witnesses:[{name:'',kelas:'',role:''}], evidence:[], initialActions:'', reportedToCounselor:false, valuesViolated:[], severity:'sedang' }); }}
+                onClick={() => { setSubmitted(false); setStep(1); setForm({ reporterName:'', reporterStatus:'', reporterPhone:'', reporterEmail:'', isAnonymous:false, perpetrators:[{name:'', status:'siswa_internal', kelas:'', description:''}], victims:[{name:'', status:'siswa_internal', kelas:'', relation:''}], incidentType:'', bullyingTypes:[], location:'', incidentDate:'', incidentTime:'', chronology:'', witnesses:[{name:'',kelas:'',role:''}], evidence:[], initialActions:'', reportedToCounselor:false, valuesViolated:[], severity:'sedang' }); }}
                 className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold shadow-lg shadow-violet-200 transition-all"
               >
                 Buat Laporan Baru
@@ -446,9 +465,21 @@ export default function LaporanKejadianPage() {
                       <input type="text" value={perp.name} onChange={e => handlePerpChange(idx, 'name', e.target.value)} placeholder="Jika diketahui" className={inputClass} />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Kelas / Jurusan</label>
-                      <input type="text" value={perp.kelas} onChange={e => handlePerpChange(idx, 'kelas', e.target.value)} placeholder="Misal: XI IPA 2" className={inputClass} />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Status / Asal Pelaku</label>
+                      <select value={perp.status || 'siswa_internal'} onChange={e => handlePerpChange(idx, 'status', e.target.value)} className={inputClass}>
+                        {PERSON_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      </select>
                     </div>
+                    {perp.status !== 'lainnya' && (
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">
+                          {perp.status === 'siswa_internal' ? 'Kelas / Jurusan' : 
+                           perp.status === 'siswa_luar' ? 'Nama Sekolah & Kelas' : 
+                           'Asal Instansi / Pekerjaan'}
+                        </label>
+                        <input type="text" value={perp.kelas} onChange={e => handlePerpChange(idx, 'kelas', e.target.value)} placeholder="Opsional" className={inputClass} />
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Ciri-ciri Fisik <span className="text-slate-400 font-normal">(opsional)</span></label>
                       <textarea value={perp.description} onChange={e => handlePerpChange(idx, 'description', e.target.value)} placeholder="Tinggi, berambut pirang, berkacamata, dll." rows={2} className={textareaClass} />
@@ -479,12 +510,27 @@ export default function LaporanKejadianPage() {
                       <input type="text" value={vic.name} onChange={e => handleVictimChange(idx, 'name', e.target.value)} placeholder="Jika diketahui" className={inputClass} />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-1">Kelas / Jurusan Korban</label>
-                      <input type="text" value={vic.kelas} onChange={e => handleVictimChange(idx, 'kelas', e.target.value)} placeholder="Misal: X IPS 1" className={inputClass} />
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Status / Asal Korban</label>
+                      <select value={vic.status || 'siswa_internal'} onChange={e => handleVictimChange(idx, 'status', e.target.value)} className={inputClass}>
+                        {PERSON_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      </select>
                     </div>
+                    {vic.status !== 'lainnya' && (
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">
+                          {vic.status === 'siswa_internal' ? 'Kelas / Jurusan' : 
+                           vic.status === 'siswa_luar' ? 'Nama Sekolah & Kelas' : 
+                           'Asal Instansi / Pekerjaan'}
+                        </label>
+                        <input type="text" value={vic.kelas} onChange={e => handleVictimChange(idx, 'kelas', e.target.value)} placeholder="Opsional" className={inputClass} />
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1">Hubungan dengan Pelaku</label>
-                      <input type="text" value={vic.relation} onChange={e => handleVictimChange(idx, 'relation', e.target.value)} placeholder="Teman sekelas, senior, dll." className={inputClass} />
+                      <select value={vic.relation} onChange={e => handleVictimChange(idx, 'relation', e.target.value)} className={inputClass}>
+                        <option value="">Pilih Hubungan...</option>
+                        {VICTIM_RELATIONS.map(r => <option key={r.id} value={r.label}>{r.label}</option>)}
+                      </select>
                     </div>
                   </div>
                 ))}

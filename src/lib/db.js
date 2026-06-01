@@ -208,8 +208,7 @@ export async function saveChatSession(userId, email, category, riskLevel, summar
 export async function saveIncidentReport(data) {
   const {
     reporterId, reporterName, reporterStatus, reporterPhone, reporterEmail,
-    isAnonymous, perpetrators, perpName, perpClass, perpDescription,
-    victims, victimName, victimClass, victimRelation,
+    isAnonymous, perpetrators, victims,
     incidentType, bullyingTypes, location, incidentDate, incidentTime,
     chronology, witnesses, evidence, initialActions, reportedToCounselor,
     valuesViolated, severity,
@@ -218,20 +217,18 @@ export async function saveIncidentReport(data) {
   const result = await sql`
     INSERT INTO incident_reports (
       reporter_id, reporter_name, reporter_status, reporter_phone, reporter_email,
-      is_anonymous, perpetrators, perp_name, perp_class, perp_description,
-      victims, victim_name, victim_class, victim_relation,
+      is_anonymous, perpetrators, victims,
       incident_type, bullying_types, location, incident_date, incident_time,
       chronology, witnesses, evidence, initial_actions, reported_to_counselor,
       values_violated, severity
     ) VALUES (
       ${reporterId}, ${reporterName || null}, ${reporterStatus || null}, ${reporterPhone || null}, ${reporterEmail || null},
-      ${isAnonymous || false}, ${JSON.stringify(perpetrators || [])}, ${perpName || null}, ${perpClass || null}, ${perpDescription || null},
-      ${JSON.stringify(victims || [])}, ${victimName || null}, ${victimClass || null}, ${victimRelation || null},
+      ${isAnonymous || false}, ${JSON.stringify(perpetrators || [])}, ${JSON.stringify(victims || [])},
       ${incidentType}, ${JSON.stringify(bullyingTypes || [])}, ${location || null}, ${incidentDate || null}, ${incidentTime || null},
       ${chronology || null}, ${JSON.stringify(witnesses || [])}, ${JSON.stringify(evidence || [])}, ${initialActions || null}, ${reportedToCounselor || false},
       ${JSON.stringify(valuesViolated || [])}, ${severity || 'sedang'}
     )
-    RETURNING id, created_at
+    RETURNING *;
   `;
 
   return result[0];

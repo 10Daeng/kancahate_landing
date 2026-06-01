@@ -57,6 +57,15 @@ const REPORTER_STATUS_LABELS = {
   lainnya: 'Lainnya',
 };
 
+const PERSON_STATUS_LABELS = {
+  siswa_internal: 'Siswa Satu Sekolah',
+  siswa_luar: 'Siswa Sekolah Lain',
+  guru_staf: 'Guru / Staf',
+  masyarakat: 'Masyarakat Umum',
+  keluarga: 'Orang Tua / Keluarga',
+  lainnya: 'Lainnya'
+};
+
 export default function IncidentReportsAdmin() {
   const router = useRouter();
   const [reports, setReports] = useState([]);
@@ -205,7 +214,7 @@ export default function IncidentReportsAdmin() {
                         {report.location && <span className="flex items-center gap-1"><MapPin size={12} />{report.location}</span>}
                         <span>{formatDate(report.created_at)}</span>
                         {report.is_anonymous ? <span className="text-violet-500 font-bold">Anonim</span> : <span>{report.reporter_name || report.reporter_email || 'Pengguna'}</span>}
-                        {report.victim_name && <span className="text-blue-500">Korban: {report.victim_name}</span>}
+                        {report.victims && report.victims.length > 0 && report.victims[0].name && <span className="text-blue-500">Korban: {report.victims[0].name}</span>}
                       </div>
                     </div>
                     <ChevronRight size={20} className="text-slate-300 group-hover:text-violet-400 transition-colors shrink-0 mt-2" />
@@ -251,25 +260,39 @@ export default function IncidentReportsAdmin() {
               </div>
 
               {/* Section 2: Pelaku */}
-              {(selectedReport.perp_name || selectedReport.perp_class || selectedReport.perp_description) && (
+              {selectedReport.perpetrators && selectedReport.perpetrators.length > 0 && selectedReport.perpetrators[0].name && (
                 <div>
                   <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm uppercase tracking-wider"><AlertTriangle size={16} className="text-red-500" />Informasi Pelaku</h3>
-                  <div className="grid grid-cols-2 gap-4 bg-red-50 p-4 rounded-xl">
-                    <DetailRow label="Nama Pelaku" value={selectedReport.perp_name || '-'} />
-                    <DetailRow label="Kelas/Jurusan" value={selectedReport.perp_class || '-'} />
-                    {selectedReport.perp_description && <div className="col-span-2"><h4 className="text-sm font-bold text-slate-500 mb-1">Ciri-ciri Fisik</h4><p className="text-slate-800 text-sm">{selectedReport.perp_description}</p></div>}
+                  <div className="space-y-3">
+                    {selectedReport.perpetrators.map((perp, idx) => (
+                      <div key={idx} className="bg-red-50 p-4 rounded-xl">
+                        <div className="grid grid-cols-2 gap-4">
+                          <DetailRow label="Nama Pelaku" value={perp.name || '-'} />
+                          <DetailRow label="Status / Asal" value={PERSON_STATUS_LABELS[perp.status] || perp.status || '-'} />
+                          {perp.status !== 'lainnya' && <DetailRow label="Kelas / Instansi" value={perp.kelas || '-'} />}
+                          {perp.description && <div className="col-span-2"><h4 className="text-sm font-bold text-slate-500 mb-1">Ciri-ciri Fisik</h4><p className="text-slate-800 text-sm">{perp.description}</p></div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* Section 3: Korban */}
-              {(selectedReport.victim_name || selectedReport.victim_class || selectedReport.victim_relation) && (
+              {selectedReport.victims && selectedReport.victims.length > 0 && selectedReport.victims[0].name && (
                 <div>
                   <h3 className="font-bold text-slate-700 mb-3 flex items-center gap-2 text-sm uppercase tracking-wider"><Heart size={16} className="text-blue-500" />Informasi Korban</h3>
-                  <div className="grid grid-cols-2 gap-4 bg-blue-50 p-4 rounded-xl">
-                    <DetailRow label="Nama Korban" value={selectedReport.victim_name || '-'} />
-                    <DetailRow label="Kelas/Jurusan" value={selectedReport.victim_class || '-'} />
-                    <DetailRow label="Hubungan dgn Pelaku" value={selectedReport.victim_relation || '-'} />
+                  <div className="space-y-3">
+                    {selectedReport.victims.map((vic, idx) => (
+                      <div key={idx} className="bg-blue-50 p-4 rounded-xl">
+                        <div className="grid grid-cols-2 gap-4">
+                          <DetailRow label="Nama Korban" value={vic.name || '-'} />
+                          <DetailRow label="Status / Asal" value={PERSON_STATUS_LABELS[vic.status] || vic.status || '-'} />
+                          {vic.status !== 'lainnya' && <DetailRow label="Kelas / Instansi" value={vic.kelas || '-'} />}
+                          <DetailRow label="Hubungan dgn Pelaku" value={vic.relation || '-'} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
