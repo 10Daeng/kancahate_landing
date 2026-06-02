@@ -4,9 +4,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Shield, Sparkles } from 'lucide-react';
+import { Menu, X, Shield, Sparkles, LogOut } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function Header({ actionButtonHandler }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -89,16 +89,25 @@ export default function Header({ actionButtonHandler }) {
         {/* Desktop Actions */}
         <div className="hidden lg:flex items-center gap-2">
           {user ? (
-            <Link
-              href={user.email?.includes('lenterabatin') ? '/kancah-private-auth' : '/dashboard'}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
-            >
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
-                {user.email[0].toUpperCase()}
-              </div>
-              <span className="max-w-[100px] truncate">{user.email.split('@')[0]}</span>
-            </Link>
+            <div className="flex items-center gap-1">
+              <Link
+                href={user.email?.includes('lenterabatin') ? '/kancah-private-auth' : '/dashboard'}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
+              >
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  style={{ background: 'linear-gradient(135deg, #7C3AED, #EC4899)' }}>
+                  {user.email[0].toUpperCase()}
+                </div>
+                <span className="max-w-[100px] truncate">{user.email.split('@')[0]}</span>
+              </Link>
+              <button 
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                title="Keluar"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
           ) : (
             <Link
               href="/login"
@@ -170,7 +179,21 @@ export default function Header({ actionButtonHandler }) {
                 ))}
               </div>
 
+              {/* User Mobile Actions */}
+              {user && (
+                <div className="pt-2 border-t border-slate-100/50 mt-2">
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="w-full text-left py-3 px-4 text-sm font-semibold text-rose-500 hover:bg-rose-50 rounded-xl flex items-center gap-2"
+                  >
+                    <LogOut size={18} />
+                    Keluar Akun
+                  </button>
+                </div>
+              )}
+
               {/* Mobile CTA */}
+
               {actionButtonHandler ? (
                 <button
                   onClick={() => { setMobileMenuOpen(false); actionButtonHandler(); }}

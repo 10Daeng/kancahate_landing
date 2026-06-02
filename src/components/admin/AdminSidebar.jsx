@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, Users, Database, 
-  AlertTriangle, ArrowLeft, Menu, X, BookOpen, Search
+  AlertTriangle, ArrowLeft, Menu, X, BookOpen, Search, LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { signOut } from 'next-auth/react';
 
 const ADMIN_MENUS = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -53,7 +54,7 @@ const SidebarContent = ({ pathname, setIsOpen }) => (
     </div>
 
     {/* Bottom Actions */}
-    <div className="p-4 border-t border-slate-800">
+    <div className="p-4 border-t border-slate-800 space-y-2">
       <Link
         href="/dashboard"
         className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-medium"
@@ -61,6 +62,13 @@ const SidebarContent = ({ pathname, setIsOpen }) => (
         <ArrowLeft size={20} />
         Kembali ke Web
       </Link>
+      <button
+        onClick={() => signOut({ callbackUrl: '/' })}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:text-white hover:bg-rose-500/20 transition-all font-medium"
+      >
+        <LogOut size={20} />
+        Keluar (Log Out)
+      </button>
     </div>
   </div>
 );
