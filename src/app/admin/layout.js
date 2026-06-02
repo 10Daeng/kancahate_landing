@@ -1,4 +1,5 @@
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminTopBar from '@/components/admin/AdminTopBar';
 
 export const metadata = {
   title: 'Kancah Ate | Admin Panel',
@@ -12,7 +13,8 @@ export default function AdminLayout({ children }) {
       <AdminSidebar />
       
       {/* Main Content Area */}
-      <main className="flex-1 h-full overflow-y-auto lg:pl-72 w-full">
+      <main className="flex-1 h-full overflow-y-auto lg:pl-72 w-full flex flex-col">
+        <AdminTopBar />
         {/* We add extra padding at the top for mobile because the mobile toggle button is absolute */}
         <div className="pt-16 lg:pt-0 min-h-full">
           {children}

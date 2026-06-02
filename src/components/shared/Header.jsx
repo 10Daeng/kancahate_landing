@@ -102,10 +102,11 @@ export default function Header({ actionButtonHandler }) {
               </Link>
               <button 
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
                 title="Keluar"
               >
-                <LogOut size={18} />
+                <LogOut size={16} />
+                <span className="hidden sm:inline">Keluar</span>
               </button>
             </div>
           ) : (
