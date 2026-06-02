@@ -1,6 +1,6 @@
 // --- SHAREABLE RESULT COMPONENT ---
 // Gen Z-friendly: Share assessment results to social media
-// Visual: Estetik, card-based, ready to screenshot
+// Visual: Estetik, portrait card (9:16 ratio), ready to screenshot for IG Story/WA Status
 
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
@@ -24,128 +24,79 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
   const cardRef = useRef(null);
 
   // Gunakan waktu selesai tes atau waktu sekarang
-  // Pastikan completionTime selalu Date object yang valid
   const completionTime = (completedAt && completedAt !== null) ? new Date(completedAt) : new Date();
 
-  // Format tanggal dan waktu WIB
+  // Format tanggal WIB
   const formatDateWIB = (date) => {
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '-';
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('id-ID', options);
   };
 
-  const formatTimeWIB = (date) => {
-    if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '--:--';
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes} WIB`;
-  };
-
   const currentDate = formatDateWIB(completionTime);
-  const currentTime = formatTimeWIB(completionTime);
 
-  // Konfigurasi untuk setiap tipe tes
+  // Konfigurasi visual untuk setiap tipe tes
   const getTestConfig = (testType) => {
     const configs = {
       GAD7: {
-        headerGradient: 'linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%)',
-        headerBg: '#14b8a6',
+        gradient: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
         emoji: '🧠',
-        emojiLarge: '🧠',
         title: 'Tingkat Kecemasan',
-        resultColor: '#16a34a',
-        resultBg: '#dcfce7',
-        description: 'Tes untuk mengukur tingkat kecemasan yang kamu alami'
+        textColor: 'white',
       },
       PSS10: {
-        headerGradient: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)',
-        headerBg: '#f97316',
+        gradient: 'linear-gradient(135deg, #ea580c 0%, #f97316 50%, #fdba74 100%)',
         emoji: '😰',
-        emojiLarge: '😰',
         title: 'Tingkat Stres',
-        resultColor: '#ea580c',
-        resultBg: '#fed7aa',
-        description: 'Tes untuk mengukur tingkat stres yang kamu alami'
+        textColor: 'white',
       },
       MBTI: {
-        headerGradient: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-        headerBg: '#a855f7',
+        gradient: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 50%, #f472b6 100%)',
         emoji: '🎭',
-        emojiLarge: '🎭',
         title: 'Tipe Kepribadian',
-        resultColor: '#9333ea',
-        resultBg: '#f3e8ff',
-        description: 'Tes untuk mengetahui 1 dari 16 tipe karaktermu'
+        textColor: 'white',
       },
       BigFive: {
-        headerGradient: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
-        headerBg: '#3b82f6',
+        gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #93c5fd 100%)',
         emoji: '🌟',
-        emojiLarge: '🌟',
         title: 'Kepribadian Big Five',
-        resultColor: '#2563eb',
-        resultBg: '#dbeafe',
-        description: 'Tes untuk mengetahui 5 dimensi utama kepribadianmu'
+        textColor: 'white',
       },
       RIASEC: {
-        headerGradient: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-        headerBg: '#a855f7',
+        gradient: 'linear-gradient(135deg, #be185d 0%, #ec4899 50%, #fbcfe8 100%)',
         emoji: '💼',
-        emojiLarge: '💼',
         title: 'Tes Minat Karir',
-        resultColor: '#9333ea',
-        resultBg: '#f3e8ff',
-        description: 'Tes Holland Code untuk menemukan karir yang sesuai'
+        textColor: 'white',
       },
       PHQ9: {
-        headerGradient: 'linear-gradient(135deg, #fb7185 0%, #f472b6 100%)',
-        headerBg: '#fb7185',
+        gradient: 'linear-gradient(135deg, #be123c 0%, #f43f5e 50%, #fda4af 100%)',
         emoji: '💔',
-        emojiLarge: '💔',
         title: 'Tingkat Depresi',
-        resultColor: '#e11d48',
-        resultBg: '#ffe4e6',
-        description: 'Tes untuk mengukur gejala depresi yang mungkin kamu alami'
+        textColor: 'white',
       },
       ROSENBERG: {
-        headerGradient: 'linear-gradient(135deg, #facc15 0%, #f97316 100%)',
-        headerBg: '#facc15',
+        gradient: 'linear-gradient(135deg, #ca8a04 0%, #eab308 50%, #fef08a 100%)',
         emoji: '⭐',
-        emojiLarge: '⭐',
         title: 'Tingkat Harga Diri',
-        resultColor: '#ca8a04',
-        resultBg: '#fef9c3',
-        description: 'Tes untuk mengukur tingkat kepercayaan diri kamu'
+        textColor: '#422006', // dark brown for yellow bg
       },
       VARK: {
-        headerGradient: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-        headerBg: '#8b5cf6',
+        gradient: 'linear-gradient(135deg, #5b21b6 0%, #8b5cf6 50%, #c4b5fd 100%)',
         emoji: '📚',
-        emojiLarge: '📚',
         title: 'Gaya Belajar',
-        resultColor: '#7c3aed',
-        resultBg: '#ede9fe',
-        description: 'Tes untuk mengetahui gaya belajarmu'
+        textColor: 'white',
       },
       MI: {
-        headerGradient: 'linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)',
-        headerBg: '#6366f1',
+        gradient: 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #a5b4fc 100%)',
         emoji: '🧠',
-        emojiLarge: '🧠',
         title: 'Multiple Intelligence',
-        resultColor: '#4f46e5',
-        resultBg: '#e0e7ff',
-        description: 'Tes untuk mengetahui kecerdasan unikmu'
+        textColor: 'white',
       },
       LoveLanguages: {
-        headerGradient: 'linear-gradient(135deg, #f472b6 0%, #fb7185 100%)',
-        headerBg: '#f472b6',
+        gradient: 'linear-gradient(135deg, #be185d 0%, #f472b6 50%, #fce7f3 100%)',
         emoji: '❤️',
-        emojiLarge: '❤️',
         title: 'Bahasa Cinta',
-        resultColor: '#db2777',
-        resultBg: '#fce7f3',
-        description: 'Tes untuk mengetahui bahasa cintamu'
+        textColor: 'white',
       }
     };
     return configs[testType] || configs.GAD7;
@@ -154,27 +105,27 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
   const getLabelInfo = (testType, result) => {
     switch (testType) {
       case 'GAD7':
-        if (result.score <= 4) return { label: 'Kecemasan Minimal', emoji: '😊', color: '#16a34a', bg: '#dcfce7', desc: 'Kondisimu baik-baik saja' };
-        if (result.score <= 9) return { label: 'Kecemasan Ringan', emoji: '😌', color: '#84cc16', bg: '#bef264', desc: 'Tingkat kecemasan ringan' };
-        if (result.score <= 14) return { label: 'Kecemasan Sedang', emoji: '😟', color: '#f59e0b', bg: '#fed7aa', desc: 'Perlu perhatian khusus' };
-        return { label: 'Kecemasan Berat', emoji: '😰', color: '#dc2626', bg: '#fecaca', desc: 'Segera cari bantuan' };
+        if (result.score <= 4) return { label: 'Kecemasan Minimal', desc: 'Kondisimu baik-baik saja dan terkendali. Pertahankan gaya hidup sehatmu!' };
+        if (result.score <= 9) return { label: 'Kecemasan Ringan', desc: 'Tingkat kecemasan ringan. Wajar terjadi, luangkan waktu untuk relaksasi.' };
+        if (result.score <= 14) return { label: 'Kecemasan Sedang', desc: 'Perlu perhatian khusus. Cobalah teknik grounding atau mindfulness.' };
+        return { label: 'Kecemasan Berat', desc: 'Kecemasanmu cukup tinggi. Jangan ragu untuk mencari bantuan profesional.' };
       case 'PSS10':
-        if (result.score <= 13) return { label: 'Stres Rendah', emoji: '😊', color: '#16a34a', bg: '#dcfce7', desc: 'Tingkat stres rendah' };
-        if (result.score <= 26) return { label: 'Stres Sedang', emoji: '😐', color: '#f59e0b', bg: '#fed7aa', desc: 'Tingkat stres sedang' };
-        return { label: 'Stres Tinggi', emoji: '😰', color: '#dc2626', bg: '#fecaca', desc: 'Tingkat stres tinggi' };
+        if (result.score <= 13) return { label: 'Stres Rendah', desc: 'Kamu mampu mengelola tekanan hidup dengan sangat baik!' };
+        if (result.score <= 26) return { label: 'Stres Sedang', desc: 'Kamu sedang menghadapi beberapa tekanan. Jangan lupa istirahat.' };
+        return { label: 'Stres Tinggi', desc: 'Beban stresmu cukup berat. Prioritaskan kesehatan mentalmu saat ini.' };
       case 'PHQ9':
-        if (result.score <= 4) return { label: 'Depresi Minimal', emoji: '😊', color: '#16a34a', bg: '#dcfce7', desc: 'Tingkat depresi minimal' };
-        if (result.score <= 9) return { label: 'Depresi Ringan', emoji: '😌', color: '#84cc16', bg: '#bef264', desc: 'Tingkat depresi ringan' };
-        if (result.score <= 14) return { label: 'Depresi Sedang', emoji: '😟', color: '#f59e0b', bg: '#fed7aa', desc: 'Tingkat depresi sedang' };
-        if (result.score <= 19) return { label: 'Depresi Moderat', emoji: '😰', color: '#ea580c', bg: '#f97316', desc: 'Tingkat depresi moderat' };
-        return { label: 'Depresi Berat', emoji: '😢', color: '#dc2626', bg: '#fecaca', desc: 'Tingkat depresi berat' };
+        if (result.score <= 4) return { label: 'Depresi Minimal', desc: 'Kondisi mood kamu stabil dan sangat baik.' };
+        if (result.score <= 9) return { label: 'Depresi Ringan', desc: 'Ada sedikit penurunan mood. Pastikan cukup tidur dan bersosialisasi.' };
+        if (result.score <= 14) return { label: 'Depresi Sedang', desc: 'Gejala depresimu mulai mengganggu aktivitas. Cari teman curhat.' };
+        if (result.score <= 19) return { label: 'Depresi Moderat', desc: 'Kondisimu butuh dukungan. Pertimbangkan untuk konseling.' };
+        return { label: 'Depresi Berat', desc: 'Gejala depresi berat. Sangat disarankan untuk konsultasi dengan psikolog/psikiater.' };
       case 'ROSENBERG':
-        if (result.score >= 35) return { label: 'Harga Diri Sangat Tinggi', emoji: '⭐', color: '#16a34a', bg: '#dcfce7', desc: 'Sangat percaya diri' };
-        if (result.score >= 30) return { label: 'Harga Diri Tinggi', emoji: '😊', color: '#14b8a6', bg: '#ccfbf1', desc: 'Percaya diri' };
-        if (result.score >= 25) return { label: 'Harga Diri Sedang', emoji: '😐', color: '#f59e0b', bg: '#fed7aa', desc: 'Harga diri sedang' };
-        return { label: 'Harga Diri Rendah', emoji: '😟', color: '#ef4444', bg: '#fecaca', desc: 'Perlu tingkatkan' };
+        if (result.score >= 35) return { label: 'Sangat Percaya Diri', desc: 'Kamu memiliki harga diri dan respek yang luar biasa pada dirimu sendiri!' };
+        if (result.score >= 30) return { label: 'Percaya Diri', desc: 'Kamu tahu nilai dirimu dan memiliki pandangan positif terhadap dirimu.' };
+        if (result.score >= 25) return { label: 'Harga Diri Sedang', desc: 'Kepercayaan dirimu cukup stabil, meski kadang ada keraguan kecil.' };
+        return { label: 'Harga Diri Rendah', desc: 'Kamu butuh lebih mengapresiasi diri sendiri. Kamu lebih berharga dari yang kamu kira.' };
       default:
-        return { label: result.label || result.type || result.title || 'Hasil Tes', emoji: '📊', color: '#6366f1', bg: '#e0e7ff', desc: 'Hasil tes kamu' };
+        return { label: result.label || result.type || result.title || 'Hasil Tes', desc: 'Hasil tes kepribadian kamu' };
     }
   };
 
@@ -185,18 +136,12 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
     return `${result.score}/${maxScore}`;
   };
 
-  const getDescription = (testType, result, labelInfo) => {
-    if (result.description) return result.description;
-    if (result.desc) return result.desc;
-    return labelInfo.desc;
-  };
-
   const config = getTestConfig(testType);
   const labelInfo = getLabelInfo(testType, result);
   const scoreDisplay = getScoreDisplay(testType, result);
-  const description = getDescription(testType, result, labelInfo);
+  const description = result.description || result.desc || labelInfo.desc;
 
-  // Copy link ke clipboard
+  // Copy link
   const handleCopyLink = () => {
     const shareUrl = `${window.location.origin}?ref=${testType}-${result.type || result.score}`;
     navigator.clipboard.writeText(shareUrl);
@@ -204,24 +149,23 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Share ke email
+  // Share email
   const handleShareEmail = () => {
     const subject = `Hasil Tes ${config.title} - ${labelInfo.label}`;
     const body = `Aku baru saja tes ${config.title} di Kancah Ate!\n\nHasilku: ${labelInfo.label}\n${scoreDisplay ? `Skor: ${scoreDisplay}\n` : ''}${description}\n\nCoba tesnya di: ${window.location.href}`;
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
-  // Download sebagai gambar
+  // Download Image
   const handleDownload = async () => {
     if (!cardRef.current) return;
-
     setIsDownloading(true);
 
     try {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       const canvas = await html2canvas(cardRef.current, {
-        scale: 3,
+        scale: 4, // Scale 4 for HD Instagram Story crispness
         backgroundColor: '#ffffff',
         logging: false,
         useCORS: true,
@@ -246,170 +190,196 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
 
   return (
     <div className="space-y-4">
-      {/* Shareable Card - dengan inline styles untuk html2canvas */}
-      <div
-        ref={cardRef}
-        className="relative bg-white rounded-3xl shadow-2xl overflow-hidden"
-        style={{
-          width: '100%',
-          maxWidth: '480px',
-          margin: '0 auto',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        }}
-      >
-        {/* Header dengan gradient */}
+      {/* Shareable Card - Portrait 9:16 Instagram Story Format */}
+      <div className="flex justify-center w-full">
         <div
+          ref={cardRef}
+          className="relative overflow-hidden"
           style={{
-            padding: '24px',
-            paddingBottom: '16px',
-            background: config.headerGradient
+            width: '100%',
+            maxWidth: '380px', // Portrait constraint
+            aspectRatio: '9/16', // Instagram Story proportion
+            minHeight: '675px', // Fallback height
+            margin: '0 auto',
+            borderRadius: '24px',
+            background: config.gradient,
+            color: config.textColor,
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          {/* Badge Title */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
+          {/* Subtle pattern overlay for texture (html2canvas safe) */}
+          <div style={{
+            position: 'absolute', inset: 0, opacity: 0.1,
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '24px 24px'
+          }}></div>
+
+          {/* TOP BAR: Test Title Badge (Left) & Kancah Ate Logo (Right) */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '24px', position: 'relative', zIndex: 10
+          }}>
+            {/* Test Badge */}
+            <div style={{
               background: 'rgba(255,255,255,0.2)',
-              color: 'white',
+              backdropFilter: 'blur(10px)',
               padding: '6px 14px',
               borderRadius: '20px',
-              fontSize: '11px',
-              fontWeight: '600',
-              marginBottom: '0'
-            }}
-          >
-            <span style={{ fontSize: '14px' }}>{config.emoji}</span>
-            <span>{config.title}</span>
-          </div>
-        </div>
-
-        {/* Content Container */}
-        <div style={{ padding: '0 24px 24px 24px' }}>
-          {/* Result Card dengan Emoji Besar */}
-          <div
-            style={{
+              fontSize: '12px',
+              fontWeight: '700',
               display: 'flex',
               alignItems: 'center',
-              gap: '16px',
-              background: labelInfo.bg,
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px',
-              border: `2px solid ${labelInfo.color}30`
-            }}
-          >
-            {/* Large Emoji */}
-            <div
-              style={{
-                fontSize: '48px',
-                lineHeight: 1,
-                flexShrink: 0,
-                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.1))'
-              }}
-            >
-              {config.emojiLarge}
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+            }}>
+              <span style={{ fontSize: '14px' }}>{config.emoji}</span>
+              <span>{config.title}</span>
             </div>
 
-            {/* Result Info */}
-            <div style={{ flex: 1 }}>
-              {/* Label */}
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '12px', color: `${labelInfo.color}99`, fontWeight: 500 }}>
-                  Hasil tes
-                </span>
+            {/* Logo Kancah Ate (Right side as requested) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '28px', height: '28px',
+                background: 'rgba(255,255,255,0.95)',
+                borderRadius: '8px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}>
+                <span style={{ color: '#f97316', fontSize: '11px', fontWeight: 900 }}>KA</span>
               </div>
-
-              {/* Main Label */}
-              <div
-                style={{
-                  color: labelInfo.color,
-                  fontSize: '22px',
-                  fontWeight: 800,
-                  lineHeight: 1.2,
-                  marginBottom: '4px'
-                }}
-              >
-                {labelInfo.label}
+              <div style={{
+                fontSize: '13px', fontWeight: 800,
+                letterSpacing: '0.5px', opacity: 0.95
+              }}>
+                Kancah Ate
               </div>
-
-              {/* Score Display */}
-              {scoreDisplay && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: labelInfo.color
-                  }}
-                >
-                  <span style={{ opacity: 0.7 }}>Skor:</span>
-                  <span style={{ fontSize: '18px', fontWeight: 700 }}>{scoreDisplay}</span>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Description */}
-          <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, marginBottom: '20px' }}>
-            {description}
-          </p>
-
-          {/* Footer */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {/* Logo & Brand */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
-                style={{
-                  width: '28px',
-                  height: '28px',
-                  background: 'linear-gradient(135deg, #fb923c 0%, #f59e0b 100%)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <span style={{ color: 'white', fontSize: '10px', fontWeight: 700 }}>KA</span>
-              </div>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }}>Kancah Ate</div>
-                <div style={{ fontSize: '10px', color: '#94a3b8' }}>Teman Cerita Virtual</div>
-              </div>
+          {/* MAIN CONTENT: Centered */}
+          <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', alignItems: 'center',
+            padding: '0 32px', position: 'relative', zIndex: 10,
+            textAlign: 'center'
+          }}>
+            {/* Huge Emoji */}
+            <div style={{
+              fontSize: '80px',
+              lineHeight: 1,
+              marginBottom: '24px',
+              filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.2))'
+            }}>
+              {config.emoji}
             </div>
 
-            {/* Date & URL */}
+            {/* "YOUR RESULT" Text */}
+            <div style={{
+              fontSize: '12px',
+              fontWeight: 800,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              opacity: 0.8,
+              marginBottom: '8px'
+            }}>
+              Hasil Tes Kamu
+            </div>
+
+            {/* Main Result Label */}
+            <h1 style={{
+              fontSize: '38px',
+              fontWeight: 900,
+              lineHeight: 1.1,
+              letterSpacing: '-1px',
+              marginBottom: scoreDisplay ? '16px' : '32px',
+              textShadow: '0 4px 12px rgba(0,0,0,0.15)'
+            }}>
+              {labelInfo.label.toUpperCase()}
+            </h1>
+
+            {/* Score Pill (if applicable) */}
+            {scoreDisplay && (
+              <div style={{
+                background: 'rgba(0,0,0,0.15)',
+                padding: '8px 20px',
+                borderRadius: '24px',
+                fontSize: '18px',
+                fontWeight: 800,
+                marginBottom: '32px',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}>
+                Skor: {scoreDisplay}
+              </div>
+            )}
+
+            {/* Description Glass Card */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '20px',
+              padding: '24px',
+              width: '100%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+            }}>
+              <p style={{
+                fontSize: '15px',
+                lineHeight: 1.6,
+                fontWeight: 500,
+                margin: 0,
+                textShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}>
+                "{description}"
+              </p>
+            </div>
+          </div>
+
+          {/* FOOTER: Date & URL */}
+          <div style={{
+            padding: '24px',
+            position: 'relative', zIndex: 10,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+            opacity: 0.8
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: 600 }}>
+              {userName}
+            </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '10px', color: '#94a3b8' }}>{currentDate} • {currentTime}</div>
-              <div style={{ fontSize: '10px', color: '#cbd5e1' }}>kancahate.my.id</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '1px' }}>
+                KANCAHATE.MY.ID
+              </div>
+              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>
+                {currentDate}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Share Buttons */}
-      <div className="flex gap-3 flex-wrap">
+      {/* Action Buttons (outside the card) */}
+      <div className="flex gap-3 flex-wrap max-w-[380px] mx-auto mt-6">
         <button
           onClick={() => setShowShareModal(!showShareModal)}
-          className="flex-1 min-w-[140px] bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
+          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
         >
           <Share2 size={18} />
-          Share Hasil
+          Bagikan
         </button>
         <button
           onClick={handleCopyLink}
-          className="flex-1 min-w-[140px] bg-slate-100 text-slate-700 px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-all"
+          className="bg-white border-2 border-slate-200 text-slate-700 px-4 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 hover:border-slate-300 transition-all"
+          title="Copy Link"
         >
           {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
-          {copied ? 'Tersalin!' : 'Copy Link'}
         </button>
         <button
           onClick={handleDownload}
           disabled={isDownloading}
-          className="bg-slate-100 text-slate-700 px-4 py-3 rounded-xl hover:bg-slate-200 transition-all disabled:opacity-50"
+          className="bg-white border-2 border-slate-200 text-slate-700 px-4 py-3.5 rounded-xl flex items-center justify-center hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50"
           title="Download Gambar"
         >
           {isDownloading ? (
@@ -423,9 +393,9 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
       {/* Share Modal */}
       {showShareModal && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mt-4 bg-white rounded-2xl p-6 shadow-xl border border-slate-100"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-[380px] mx-auto mt-4 bg-white rounded-2xl p-6 shadow-xl border border-slate-100"
         >
           <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
             <Share2 size={18} className="text-purple-500" />
@@ -456,7 +426,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
             </button>
           </div>
           <p className="text-xs text-slate-400 text-center mt-4">
-            Screenshot kartu hasil di atas untuk upload ke sosmed!
+            Screenshot kartu di atas atau klik tombol download untuk upload ke IG Story!
           </p>
         </motion.div>
       )}
