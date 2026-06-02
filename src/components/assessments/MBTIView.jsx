@@ -5,6 +5,8 @@ import { ArrowLeft, X, CheckCircle2, MessageCircle, LogIn, AlertCircle } from 'l
 import { mbtiQuestions, calculateMBTIResults, MBTI_TYPES } from '../../data/mbti_data';
 import { saveAssessmentResult, checkAuthStatus } from '../../services/assessmentService';
 import ShareableResult from './ShareableResult';
+import GateOverlay from './GateOverlay';
+
 
 /**
  * MBTIView - Komponen tes kepribadian MBTI
@@ -109,190 +111,133 @@ function MBTIView({ onBack, onChat }) {
 
   if (showResult && result) {
     const typeInfo = MBTI_TYPES[result.type];
+    const isGated = !isLoggedIn;
     return (
       <div className="max-w-4xl mx-auto px-6 py-12 animate-fade-in">
         <button onClick={onBack} className="mb-6 flex items-center gap-2 text-slate-500 hover:text-orange-500 transition-colors">
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
-        
-        <div className="bg-white rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-xl overflow-hidden relative">
-          {/* Decorative Blob */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-orange-100 rounded-bl-[10rem] -z-10 opacity-50"></div>
 
-          <div className="flex flex-col md:flex-row items-center gap-12">
+        {/* Preview tipe — selalu ditampilkan */}
+        <div className="bg-white rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-xl overflow-hidden relative mb-6">
+          <div className="flex flex-col md:flex-row items-center gap-8">
             <div className="md:w-1/3 text-center">
               <div className="text-9xl font-black text-transparent bg-clip-text bg-gradient-to-br from-orange-400 to-rose-500 mb-2">
                 {result.type}
               </div>
-              <div className="text-xl font-bold text-slate-800 tracking-widest uppercase mb-4">{typeInfo.name}</div>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {typeInfo.traits.map(t => (
-                  <span key={t} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">{t}</span>
-                ))}
-              </div>
+              <div className="text-xl font-bold text-slate-800 tracking-widest uppercase mb-2">{typeInfo.name}</div>
+              {/* Traits hanya tampil jika sudah login */}
+              {!isGated && (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {typeInfo.traits.map(t => (
+                    <span key={t} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">{t}</span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="md:w-2/3">
-              <h3 className="text-2xl font-bold text-slate-800 mb-4">Si {typeInfo.name}</h3>
-              <p className="text-slate-600 leading-relaxed text-lg mb-6">{typeInfo.desc}</p>
-              
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="w-8 font-bold text-slate-400">E</span>
-                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-400" style={{ width: `${(result.scores.E + result.scores.I) > 0 ? (result.scores.E / (result.scores.E + result.scores.I)) * 100 : 50}%` }}></div>
-                  </div>
-                  <span className="w-8 font-bold text-slate-400 text-right">I</span>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="w-8 font-bold text-slate-400">S</span>
-                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-yellow-400" style={{ width: `${(result.scores.S + result.scores.N) > 0 ? (result.scores.S / (result.scores.S + result.scores.N)) * 100 : 50}%` }}></div>
-                  </div>
-                  <span className="w-8 font-bold text-slate-400 text-right">N</span>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                   <span className="w-8 font-bold text-slate-400">T</span>
-                   <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-green-400" style={{ width: `${(result.scores.T + result.scores.F) > 0 ? (result.scores.T / (result.scores.T + result.scores.F)) * 100 : 50}%` }}></div>
-                   </div>
-                   <span className="w-8 font-bold text-slate-400 text-right">F</span>
-                 </div>
-                 <div className="flex items-center gap-4 text-sm">
-                   <span className="w-8 font-bold text-slate-400">J</span>
-                   <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-purple-400" style={{ width: `${(result.scores.J + result.scores.P) > 0 ? (result.scores.J / (result.scores.J + result.scores.P)) * 100 : 50}%` }}></div>
-                   </div>
-                   <span className="w-8 font-bold text-slate-400 text-right">P</span>
-                 </div>
+            {/* Detail — di-gate jika belum login */}
+            {isGated ? (
+              <div className="md:w-2/3 w-full">
+                <GateOverlay
+                  testName="MBTI"
+                  preview={{ title: result.type, subtitle: typeInfo.name }}
+                />
               </div>
-            </div>
+            ) : (
+              <div className="md:w-2/3">
+                <h3 className="text-2xl font-bold text-slate-800 mb-4">Si {typeInfo.name}</h3>
+                <p className="text-slate-600 leading-relaxed text-lg mb-6">{typeInfo.desc}</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="w-8 font-bold text-slate-400">E</span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-400" style={{ width: `${(result.scores.E + result.scores.I) > 0 ? (result.scores.E / (result.scores.E + result.scores.I)) * 100 : 50}%` }}></div>
+                    </div>
+                    <span className="w-8 font-bold text-slate-400 text-right">I</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="w-8 font-bold text-slate-400">S</span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-yellow-400" style={{ width: `${(result.scores.S + result.scores.N) > 0 ? (result.scores.S / (result.scores.S + result.scores.N)) * 100 : 50}%` }}></div>
+                    </div>
+                    <span className="w-8 font-bold text-slate-400 text-right">N</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="w-8 font-bold text-slate-400">T</span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-400" style={{ width: `${(result.scores.T + result.scores.F) > 0 ? (result.scores.T / (result.scores.T + result.scores.F)) * 100 : 50}%` }}></div>
+                    </div>
+                    <span className="w-8 font-bold text-slate-400 text-right">F</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="w-8 font-bold text-slate-400">J</span>
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-400" style={{ width: `${(result.scores.J + result.scores.P) > 0 ? (result.scores.J / (result.scores.J + result.scores.P)) * 100 : 50}%` }}></div>
+                    </div>
+                    <span className="w-8 font-bold text-slate-400 text-right">P</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Save Status Message */}
-          {saveStatus === 'requires_login' && (
-            <div className="mt-6 bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-              <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-bold text-amber-800 mb-1">Login Diperlukan</p>
-                <p className="text-xs text-amber-700 mb-3">Silakan login untuk menyimpan hasil tes kamu secara permanen.</p>
-                <button
-                  onClick={() => window.location.href = '/login'}
-                  className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-600 transition-colors"
-                >
-                  <LogIn size={16} />
-                  Login Sekarang
-                </button>
-              </div>
-            </div>
-          )}
-
-          {saveStatus === 'success' && (
+          {/* Save success / error banner — hanya tampil jika sudah login */}
+          {!isGated && saveStatus === 'success' && (
             <div className="mt-6 bg-green-50 border-2 border-green-200 rounded-2xl p-4 flex items-center gap-3">
               <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
               <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan!</p>
             </div>
           )}
-
-          {saveStatus === 'error' && (
+          {!isGated && saveStatus === 'error' && (
             <div className="mt-6 bg-red-50 border-2 border-red-200 rounded-2xl p-4 flex items-center gap-3">
               <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
-              <p className="text-sm font-bold text-red-800">Gagal menyimpan hasil tes. Hasil tetap ditampilkan di bawah.</p>
+              <p className="text-sm font-bold text-red-800">Gagal menyimpan hasil tes.</p>
             </div>
           )}
 
-          {/* Email Collection Section */}
-          <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-100 rounded-2xl p-6">
-            {!showEmailInput ? (
-              <div className="text-center">
-                <div className="text-4xl mb-3">📧</div>
-                <h4 className="text-lg font-bold text-slate-800 mb-2">Dapatkan Laporan Lengkap via Email</h4>
-                <p className="text-sm text-slate-600 mb-4">
-                  Dapatkan analisis mendalam, kecocokan karir, dan tips pengembangan diri berdasarkan tipe kepribadianmu.
-                </p>
-                <button
-                  onClick={() => setShowEmailInput(true)}
-                  className="bg-purple-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-600 transition-colors shadow-lg"
-                >
-                  Kirim Laporan ke Email
-                </button>
-              </div>
-            ) : (
-              <div>
-                {emailStatus === 'success' ? (
+          {/* Email + ShareableResult — hanya untuk yang sudah login */}
+          {!isGated && (
+            <>
+              <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-100 rounded-2xl p-6">
+                {!showEmailInput ? (
                   <div className="text-center">
-                    <div className="text-5xl mb-3">✅</div>
-                    <h4 className="text-lg font-bold text-green-700 mb-2">Email Terkirim!</h4>
-                    <p className="text-sm text-slate-600">Cek inbox kamu untuk laporan lengkapnya.</p>
+                    <div className="text-4xl mb-3">📧</div>
+                    <h4 className="text-lg font-bold text-slate-800 mb-2">Dapatkan Laporan Lengkap via Email</h4>
+                    <p className="text-sm text-slate-600 mb-4">Dapatkan analisis mendalam, kecocokan karir, dan tips pengembangan diri berdasarkan tipe kepribadianmu.</p>
+                    <button onClick={() => setShowEmailInput(true)} className="bg-purple-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-600 transition-colors shadow-lg">Kirim Laporan ke Email</button>
                   </div>
                 ) : (
-                  <>
-                    <h4 className="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <span>📧</span> Masukkan Email Kamu
-                    </h4>
-                    <div className="flex gap-2">
-                      <input
-                        type="email"
-                        placeholder="nama@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-400 focus:outline-none"
-                        disabled={emailStatus === 'loading'}
-                      />
-                      <button
-                        onClick={handleSendEmail}
-                        disabled={emailStatus === 'loading'}
-                        className="bg-purple-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        {emailStatus === 'loading' ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Mengirim...
-                          </>
-                        ) : (
-                          'Kirim'
-                        )}
-                      </button>
-                    </div>
-                    {emailStatus === 'error' && (
-                      <p className="text-red-500 text-sm mt-2">Email tidak valid atau gagal mengirim. Coba lagi.</p>
+                  <div>
+                    {emailStatus === 'success' ? (
+                      <div className="text-center"><div className="text-5xl mb-3">✅</div><h4 className="text-lg font-bold text-green-700 mb-2">Email Terkirim!</h4><p className="text-sm text-slate-600">Cek inbox kamu untuk laporan lengkapnya.</p></div>
+                    ) : (
+                      <>
+                        <h4 className="text-md font-bold text-slate-800 mb-3 flex items-center gap-2"><span>📧</span> Masukkan Email Kamu</h4>
+                        <div className="flex gap-2">
+                          <input type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-400 focus:outline-none" disabled={emailStatus === 'loading'} />
+                          <button onClick={handleSendEmail} disabled={emailStatus === 'loading'} className="bg-purple-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-purple-600 transition-colors disabled:opacity-50 flex items-center gap-2">{emailStatus === 'loading' ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>Mengirim...</> : 'Kirim'}</button>
+                        </div>
+                        {emailStatus === 'error' && <p className="text-red-500 text-sm mt-2">Email tidak valid atau gagal mengirim.</p>}
+                        <p className="text-xs text-slate-500 mt-3">🔒 Email kamu aman dan hanya digunakan untuk mengirim laporan.</p>
+                      </>
                     )}
-                    <p className="text-xs text-slate-500 mt-3">
-                      🔒 Email kamu aman dan hanya digunakan untuk mengirim laporan.
-                    </p>
-                  </>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* Shareable Result Card */}
-          <div className="mt-8">
-            <ShareableResult
-              testType="MBTI"
-              result={{
-                type: result.type,
-                description: typeInfo.desc
-              }}
-              userName="Kamu"
-              completedAt={completedAt}
-            />
-          </div>
+              <div className="mt-8">
+                <ShareableResult testType="MBTI" result={{ type: result.type, description: typeInfo.desc }} userName="Kamu" completedAt={completedAt} />
+              </div>
+            </>
+          )}
 
           <div className="mt-8 flex justify-center gap-4 flex-wrap">
-             <button
-              onClick={onBack}
-              className="bg-white border-2 border-slate-200 text-slate-500 px-6 py-3 rounded-xl font-bold hover:border-purple-200 hover:text-purple-500 transition-colors"
-            >
-              Selesai
-            </button>
-            <button
-              onClick={() => onChat(result)}
-              className="bg-purple-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-purple-600 transition-colors shadow-lg shadow-purple-200 flex items-center gap-2"
-            >
-              <MessageCircle size={18} />
-              Diskusikan Hasil dengan Kai
-            </button>
+            <button onClick={onBack} className="bg-white border-2 border-slate-200 text-slate-500 px-6 py-3 rounded-xl font-bold hover:border-purple-200 hover:text-purple-500 transition-colors">Selesai</button>
+            {!isGated && (
+              <button onClick={() => onChat(result)} className="bg-purple-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-purple-600 transition-colors shadow-lg shadow-purple-200 flex items-center gap-2">
+                <MessageCircle size={18} /> Diskusikan Hasil dengan Kai
+              </button>
+            )}
           </div>
         </div>
       </div>

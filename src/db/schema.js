@@ -15,6 +15,7 @@ export const users = pgTable('users', {
   otpExpires: timestamp('otp_expires'),
   resetPasswordToken: varchar('reset_password_token', { length: 255 }),
   resetPasswordExpires: timestamp('reset_password_expires'),
+  referredBy: uuid('referred_by'), // ID user yang mengajak mendaftar
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

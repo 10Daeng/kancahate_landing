@@ -1,10 +1,12 @@
 
 // --- LOVE LANGUAGES VIEW ---
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X, CheckCircle2, MessageCircle } from 'lucide-react';
 import { LOVELANGUAGES_QUIZ, LOVELANGUAGES_RESULTS } from './love_languages_data';
+import { checkAuthStatus } from '../../services/assessmentService';
 import ShareableResult from './ShareableResult';
+import GateOverlay from './GateOverlay';
 
 function LoveLanguagesView({ onBack, onChat }) {
   const [answers, setAnswers] = useState({});
@@ -13,10 +15,19 @@ function LoveLanguagesView({ onBack, onChat }) {
   const [result, setResult] = useState(null);
   const [completedAt, setCompletedAt] = useState(null);
 
+  // Login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   // Email collection state
   const [email, setEmail] = useState('');
   const [emailStatus, setEmailStatus] = useState('idle'); // idle, loading, success, error
   const [showEmailInput, setShowEmailInput] = useState(false);
+
+  useEffect(() => {
+    checkAuthStatus().then(({ isLoggedIn }) => {
+      setIsLoggedIn(isLoggedIn);
+    });
+  }, []);
 
   const totalQuestions = LOVELANGUAGES_QUIZ.questions.length;
   const currentQuestion = LOVELANGUAGES_QUIZ.questions[currentIndex];
@@ -109,101 +120,116 @@ function LoveLanguagesView({ onBack, onChat }) {
   };
 
   if (showResult && result) {
+    const isGated = !isLoggedIn;
     return (
       <div className="max-w-2xl mx-auto px-6 py-12 animate-fade-in">
         <button onClick={onBack} className="mb-6 flex items-center gap-2 text-slate-500 hover:text-orange-500 transition-colors">
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
-        
+
+        {/* Preview — selalu ditampilkan */}
         <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${result.color} transition-all`}>
           <h2 className="text-3xl md:text-4xl font-black mb-4">{result.title}</h2>
-          <p className="text-lg font-medium leading-relaxed mb-8 opacity-90">{result.desc}</p>
-          
-          <div className="bg-white/60 p-6 rounded-2xl backdrop-blur-sm border border-white/50">
-             <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-3">Insight Untukmu</h4>
-             <p className="text-slate-800 font-medium">
-               {result.advice}
-             </p>
-          </div>
-        </div>
 
-        {/* Shareable Result Card */}
-        <div className="mt-8">
-            <ShareableResult
-            testType="LoveLanguages"
-            result={{
-                type: result.title,
-                description: result.desc
-            }}
-            userName="Kamu"
-            completedAt={completedAt}
+          {isGated ? (
+            <GateOverlay
+              testName="Love Language"
+              preview={{ title: result.title, subtitle: 'Bahasa cinta utamamu' }}
             />
-        </div>
-
-        {/* Email Collection Section */}
-        <div className="mt-6 bg-gradient-to-r from-pink-50 to-rose-50 border-2 border-pink-100 rounded-2xl p-6">
-          {!showEmailInput ? (
-            <div className="text-center">
-              <div className="text-4xl mb-3">💌</div>
-              <h4 className="text-lg font-bold text-slate-800 mb-2">Dapatkan Laporan Lengkap via Email</h4>
-              <p className="text-sm text-slate-600 mb-4">
-                Dapatkan analisis mendalam tentang bahasa cintamu, tips untuk pasangan, dan cara membangun hubungan yang lebih sehat.
-              </p>
-              <button
-                onClick={() => setShowEmailInput(true)}
-                className="bg-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-lg"
-              >
-                Kirim Laporan ke Email
-              </button>
-            </div>
           ) : (
-            <div>
-              {emailStatus === 'success' ? (
-                <div className="text-center">
-                  <div className="text-5xl mb-3">✅</div>
-                  <h4 className="text-lg font-bold text-green-700 mb-2">Email Terkirim!</h4>
-                  <p className="text-sm text-slate-600">Cek inbox kamu untuk laporan lengkapnya.</p>
-                </div>
-              ) : (
-                <>
-                  <h4 className="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <span>💌</span> Masukkan Email Kamu
-                  </h4>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      placeholder="nama@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-pink-400 focus:outline-none"
-                      disabled={emailStatus === 'loading'}
-                    />
-                    <button
-                      onClick={handleSendEmail}
-                      disabled={emailStatus === 'loading'}
-                      className="bg-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {emailStatus === 'loading' ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Mengirim...
-                        </>
-                      ) : (
-                        'Kirim'
-                      )}
-                    </button>
-                  </div>
-                  {emailStatus === 'error' && (
-                    <p className="text-red-500 text-sm mt-2">Email tidak valid atau gagal mengirim. Coba lagi.</p>
-                  )}
-                  <p className="text-xs text-slate-500 mt-3">
-                    🔒 Email kamu aman dan hanya digunakan untuk mengirim laporan.
-                  </p>
-                </>
-              )}
-            </div>
+            <>
+              <p className="text-lg font-medium leading-relaxed mb-8 opacity-90">{result.desc}</p>
+              <div className="bg-white/60 p-6 rounded-2xl backdrop-blur-sm border border-white/50">
+                <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-3">Insight Untukmu</h4>
+                <p className="text-slate-800 font-medium">
+                  {result.advice}
+                </p>
+              </div>
+            </>
           )}
         </div>
+
+        {!isGated && (
+          <>
+            {/* Shareable Result Card */}
+            <div className="mt-8">
+                <ShareableResult
+                testType="LoveLanguages"
+                result={{
+                    type: result.title,
+                    description: result.desc
+                }}
+                userName="Kamu"
+                completedAt={completedAt}
+                />
+            </div>
+
+            {/* Email Collection Section */}
+            <div className="mt-6 bg-gradient-to-r from-pink-50 to-rose-50 border-2 border-pink-100 rounded-2xl p-6">
+              {!showEmailInput ? (
+                <div className="text-center">
+                  <div className="text-4xl mb-3">💌</div>
+                  <h4 className="text-lg font-bold text-slate-800 mb-2">Dapatkan Laporan Lengkap via Email</h4>
+                  <p className="text-sm text-slate-600 mb-4">
+                    Dapatkan analisis mendalam tentang bahasa cintamu, tips untuk pasangan, dan cara membangun hubungan yang lebih sehat.
+                  </p>
+                  <button
+                    onClick={() => setShowEmailInput(true)}
+                    className="bg-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-lg"
+                  >
+                    Kirim Laporan ke Email
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {emailStatus === 'success' ? (
+                    <div className="text-center">
+                      <div className="text-5xl mb-3">✅</div>
+                      <h4 className="text-lg font-bold text-green-700 mb-2">Email Terkirim!</h4>
+                      <p className="text-sm text-slate-600">Cek inbox kamu untuk laporan lengkapnya.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <h4 className="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <span>💌</span> Masukkan Email Kamu
+                      </h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          placeholder="nama@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-pink-400 focus:outline-none"
+                          disabled={emailStatus === 'loading'}
+                        />
+                        <button
+                          onClick={handleSendEmail}
+                          disabled={emailStatus === 'loading'}
+                          className="bg-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {emailStatus === 'loading' ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Mengirim...
+                            </>
+                          ) : (
+                            'Kirim'
+                          )}
+                        </button>
+                      </div>
+                      {emailStatus === 'error' && (
+                        <p className="text-red-500 text-sm mt-2">Email tidak valid atau gagal mengirim. Coba lagi.</p>
+                      )}
+                      <p className="text-xs text-slate-500 mt-3">
+                        🔒 Email kamu aman dan hanya digunakan untuk mengirim laporan.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         <div className="mt-8 flex justify-center gap-4 flex-wrap">
            <button
@@ -212,13 +238,15 @@ function LoveLanguagesView({ onBack, onChat }) {
           >
             Selesai
           </button>
-           <button
-            onClick={() => onChat(result)}
-            className="bg-violet-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-violet-600 transition-colors shadow-lg shadow-violet-200 flex items-center gap-2"
-          >
-            <MessageCircle size={18} />
-            Diskusikan dengan Kai
-          </button>
+           {!isGated && (
+             <button
+              onClick={() => onChat(result)}
+              className="bg-violet-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-violet-600 transition-colors shadow-lg shadow-violet-200 flex items-center gap-2"
+            >
+              <MessageCircle size={18} />
+              Diskusikan dengan Kai
+            </button>
+           )}
         </div>
       </div>
     );

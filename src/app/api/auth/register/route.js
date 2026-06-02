@@ -14,7 +14,7 @@ if (process.env.RESEND_API_KEY) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, email, password, turnstileToken } = body;
+    const { name, email, password, turnstileToken, referredBy } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json({ success: false, error: 'Harap isi semua kolom' }, { status: 400 });
@@ -57,11 +57,16 @@ export async function POST(request) {
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     // 4. Simpan ke database
+    // Validasi referredBy (harus UUID valid agar tidak crash)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validReferredBy = referredBy && uuidRegex.test(referredBy) ? referredBy : null;
+
     const newUser = await db.insert(schema.users).values({
       name,
       email,
       passwordHash,
       verificationToken,
+      ...(validReferredBy ? { referredBy: validReferredBy } : {}),
       // emailVerified will remain null until verified
     }).returning({ id: schema.users.id, email: schema.users.email });
 

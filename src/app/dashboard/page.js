@@ -9,7 +9,7 @@ import { getAssessmentResults } from '@/services/assessmentService';
 import { checkIsAdmin } from '@/app/admin/actions';
 import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
-import { Loader2, LogOut, Award, Calendar, ChevronRight, User, Activity, MessageCircle, Heart, X, Clock, Shield } from 'lucide-react';
+import { Loader2, LogOut, Award, Calendar, ChevronRight, User, Activity, MessageCircle, Heart, X, Clock, Shield, Users, Link2, Share2, Copy, CheckCheck } from 'lucide-react';
 
 export default function UserDashboard() {
   const router = useRouter();
@@ -19,6 +19,8 @@ export default function UserDashboard() {
   const [chatSessions, setChatSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState(null); // For chat detail modal
+  const [referralCount, setReferralCount] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   const { data: sessionData, status } = useSession();
 
@@ -53,6 +55,13 @@ export default function UserDashboard() {
       if (success && sessions) {
         setChatSessions(sessions);
       }
+
+      // Fetch referral stats
+      try {
+        const refRes = await fetch('/api/referral/stats');
+        const refData = await refRes.json();
+        if (refData.success) setReferralCount(refData.count);
+      } catch (_) {}
     } catch (error) {
       console.error('Error loading dashboard:', error);
     } finally {
@@ -145,7 +154,71 @@ export default function UserDashboard() {
                  <Award size={100} />
               </div>
            </div>
-</div>
+        </div>
+
+        {/* Undang Teman (Referral) */}
+        <div className="mb-12 animate-fade-in-up" style={{animationDelay: '0.12s'}}>
+          <div
+            className="rounded-2xl p-6 md:p-8 relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #A855F7 50%, #EC4899 100%)' }}
+          >
+            {/* Decorative */}
+            <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full" />
+            <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-white/10 rounded-full" />
+
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users size={20} className="text-white" />
+                  <span className="text-white/80 font-bold text-sm uppercase tracking-wider">Undang Teman</span>
+                </div>
+                <h3 className="text-2xl font-black text-white mb-1">
+                  Ajak temanmu bergabung! 🎉
+                </h3>
+                <p className="text-white/75 text-sm mb-4">
+                  Bagikan link ini ke temanmu. Saat mereka daftar via linkmu, kamu membantu mereka menemukan ruang aman untuk tumbuh.
+                </p>
+                {referralCount > 0 && (
+                  <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl mb-4">
+                    <CheckCheck size={16} className="text-white" />
+                    <span className="text-white font-bold text-sm">{referralCount} teman sudah bergabung via linkmu!</span>
+                  </div>
+                )}
+
+                {/* Referral link */}
+                <div className="flex gap-2">
+                  <div
+                    className="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-mono"
+                    style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)' }}
+                  >
+                    <Link2 size={14} className="text-white/70 shrink-0" />
+                    <span className="text-white truncate">kancahate.my.id/login?ref={user?.id}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://kancahate.my.id/login?ref=${user?.id}`);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+                    style={{ background: copied ? 'rgba(16,185,129,0.9)' : 'rgba(255,255,255,0.9)', color: copied ? 'white' : '#7C3AED' }}
+                  >
+                    {copied ? <><CheckCheck size={16} /> Disalin!</> : <><Copy size={16} /> Salin</>}
+                  </button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Hai! Aku pakai Kancah Ate buat jaga kesehatan mental & tes kepribadian. Gratis lho! Coba juga yuk: https://kancahate.my.id/login?ref=${user?.id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-white"
+                    style={{ background: '#25D366' }}
+                  >
+                    <Share2 size={16} /> WA
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
          {/* Report Incident Banner */}
          <div className="mb-12 animate-fade-in-up" style={{animationDelay: '0.15s'}}>

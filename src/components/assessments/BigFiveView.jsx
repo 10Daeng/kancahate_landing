@@ -5,6 +5,7 @@ import { ArrowLeft, X, CheckCircle2, MessageCircle, LogIn, AlertCircle } from 'l
 import { bigFiveShortQuestions, bigFiveShortChoices, calculateBigFiveShortResults, BIG_FIVE_TYPES, getBigFiveDescription } from '../../data/bf_short_data';
 import { saveAssessmentResult, checkAuthStatus } from '../../services/assessmentService';
 import ShareableResult from './ShareableResult';
+import GateOverlay from './GateOverlay';
 
 /**
  * BigFiveView - Komponen tes kepribadian Big Five (OCEAN)
@@ -124,6 +125,7 @@ function BigFiveView({ onBack, onChat }) {
   };
 
   if (showResult && results) {
+    const isGated = !isLoggedIn;
     return (
       <div className="max-w-4xl mx-auto px-6 py-12 animate-fade-in">
         <button onClick={onBack} className="mb-6 flex items-center gap-2 text-slate-500 hover:text-orange-500 transition-colors">
@@ -134,6 +136,12 @@ function BigFiveView({ onBack, onChat }) {
           <h2 className="text-3xl font-bold mb-4 text-slate-900">Hasil Tes Kepribadian Big Five</h2>
         </div>
 
+        {isGated ? (
+          <GateOverlay
+            testName="Big Five"
+            preview={{ title: 'Profil Big Five Kamu', subtitle: '5 dimensi kepribadian' }}
+          />
+        ) : (<>
         <div className="grid md:grid-cols-2 gap-6">
           {Object.entries(results.scores).map(([domain, score]) => {
             const typeInfo = BIG_FIVE_TYPES[domain];
@@ -291,6 +299,18 @@ function BigFiveView({ onBack, onChat }) {
             Diskusikan Hasil dengan Kai
           </button>
         </div>
+        </>)}
+
+        {isGated && (
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={onBack}
+              className="bg-white border-2 border-slate-200 text-slate-500 px-6 py-3 rounded-xl font-bold hover:border-orange-200 hover:text-orange-500 transition-colors"
+            >
+              Selesai
+            </button>
+          </div>
+        )}
       </div>
     );
   }

@@ -1,10 +1,12 @@
 
 // --- VARK (VISUAL, AUDITORY, READ/WRITE, KINESTHETIC) VIEW ---
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X, CheckCircle2, MessageCircle } from 'lucide-react';
 import { VARK_QUIZ, VARK_TYPES } from './vark_data';
+import { checkAuthStatus } from '../../services/assessmentService';
 import ShareableResult from './ShareableResult';
+import GateOverlay from './GateOverlay';
 
 function VARKView({ onBack, onChat }) {
   const [answers, setAnswers] = useState({});
@@ -13,10 +15,19 @@ function VARKView({ onBack, onChat }) {
   const [result, setResult] = useState(null);
   const [completedAt, setCompletedAt] = useState(null);
 
+  // Login state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   // Email collection state
   const [email, setEmail] = useState('');
   const [emailStatus, setEmailStatus] = useState('idle'); // idle, loading, success, error
   const [showEmailInput, setShowEmailInput] = useState(false);
+
+  useEffect(() => {
+    checkAuthStatus().then(({ isLoggedIn }) => {
+      setIsLoggedIn(isLoggedIn);
+    });
+  }, []);
 
   const totalQuestions = VARK_QUIZ.questions.length;
   const currentQuestion = VARK_QUIZ.questions[currentIndex];
@@ -123,6 +134,7 @@ function VARKView({ onBack, onChat }) {
       K: "bg-rose-50 border-rose-200 text-rose-900"
     };
     const resultColor = typeColors[result.type] || result.color;
+    const isGated = !isLoggedIn;
 
     return (
       <div className="max-w-2xl mx-auto px-6 py-12 animate-fade-in">
@@ -130,122 +142,137 @@ function VARKView({ onBack, onChat }) {
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
 
+        {/* Preview — selalu ditampilkan */}
         <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${resultColor} transition-all`}>
           <h2 className="text-3xl md:text-4xl font-black mb-2">{result.fullTitle}</h2>
-          <p className="text-lg font-medium leading-relaxed mb-6 opacity-90">{result.desc}</p>
 
-          {/* Strength Badge */}
-          <div className="bg-white/60 px-6 py-3 rounded-2xl backdrop-blur-sm border border-white/50 mb-6">
-            <p className="text-sm font-bold opacity-60 mb-1">KEKUATANMU</p>
-            <p className="font-semibold">{result.strength}</p>
-          </div>
+          {isGated ? (
+            <GateOverlay
+              testName="VARK"
+              preview={{ title: result.fullTitle, subtitle: 'Gaya belajar utamamu' }}
+            />
+          ) : (
+            <>
+              <p className="text-lg font-medium leading-relaxed mb-6 opacity-90">{result.desc}</p>
 
-          {/* Tips Section */}
-          <div className="bg-white/60 p-6 rounded-2xl backdrop-blur-sm border border-white/50 text-left">
-            <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-4 text-center">Tips Belajar Efektif</h4>
-            <ul className="space-y-3">
-              {result.tips.map((tip, idx) => (
-                <li key={idx} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center text-sm font-bold">{idx + 1}</span>
-                  <span className="font-medium">{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Score Breakdown */}
-          {result.scores && (
-            <div className="mt-6 bg-white/40 p-4 rounded-xl">
-              <p className="text-xs font-bold opacity-60 mb-3">SKOR PEMBELAJARAN</p>
-              <div className="grid grid-cols-4 gap-2 text-center">
-                {Object.entries(result.scores).map(([key, value]) => (
-                  <div key={key} className="bg-white/60 rounded-lg p-2">
-                    <p className="text-xs font-bold opacity-60">{key}</p>
-                    <p className="text-lg font-black">{value}</p>
-                  </div>
-                ))}
+              {/* Strength Badge */}
+              <div className="bg-white/60 px-6 py-3 rounded-2xl backdrop-blur-sm border border-white/50 mb-6">
+                <p className="text-sm font-bold opacity-60 mb-1">KEKUATANMU</p>
+                <p className="font-semibold">{result.strength}</p>
               </div>
-            </div>
+
+              {/* Tips Section */}
+              <div className="bg-white/60 p-6 rounded-2xl backdrop-blur-sm border border-white/50 text-left">
+                <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-4 text-center">Tips Belajar Efektif</h4>
+                <ul className="space-y-3">
+                  {result.tips.map((tip, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center text-sm font-bold">{idx + 1}</span>
+                      <span className="font-medium">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Score Breakdown */}
+              {result.scores && (
+                <div className="mt-6 bg-white/40 p-4 rounded-xl">
+                  <p className="text-xs font-bold opacity-60 mb-3">SKOR PEMBELAJARAN</p>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    {Object.entries(result.scores).map(([key, value]) => (
+                      <div key={key} className="bg-white/60 rounded-lg p-2">
+                        <p className="text-xs font-bold opacity-60">{key}</p>
+                        <p className="text-lg font-black">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Shareable Result Card */}
-        <div className="mt-8">
-            <ShareableResult
-            testType="VARK"
-            result={{
-                type: result.title,
-                description: result.desc
-            }}
-            userName="Kamu"
-            completedAt={completedAt}
-            />
-        </div>
-
-        {/* Email Collection Section */}
-        <div className="mt-6 bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-100 rounded-2xl p-6">
-          {!showEmailInput ? (
-            <div className="text-center">
-              <div className="text-4xl mb-3">📧</div>
-              <h4 className="text-lg font-bold text-slate-800 mb-2">Dapatkan Laporan Lengkap via Email</h4>
-              <p className="text-sm text-slate-600 mb-4">
-                Dapatkan metode belajar yang cocok, rekomendasi karir, dan tips belajar efektif berdasarkan gaya belajarmu.
-              </p>
-              <button
-                onClick={() => setShowEmailInput(true)}
-                className="bg-teal-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-600 transition-colors shadow-lg"
-              >
-                Kirim Laporan ke Email
-              </button>
+        {!isGated && (
+          <>
+            {/* Shareable Result Card */}
+            <div className="mt-8">
+                <ShareableResult
+                testType="VARK"
+                result={{
+                    type: result.title,
+                    description: result.desc
+                }}
+                userName="Kamu"
+                completedAt={completedAt}
+                />
             </div>
-          ) : (
-            <div>
-              {emailStatus === 'success' ? (
+
+            {/* Email Collection Section */}
+            <div className="mt-6 bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-100 rounded-2xl p-6">
+              {!showEmailInput ? (
                 <div className="text-center">
-                  <div className="text-5xl mb-3">✅</div>
-                  <h4 className="text-lg font-bold text-green-700 mb-2">Email Terkirim!</h4>
-                  <p className="text-sm text-slate-600">Cek inbox kamu untuk laporan lengkapnya.</p>
+                  <div className="text-4xl mb-3">📧</div>
+                  <h4 className="text-lg font-bold text-slate-800 mb-2">Dapatkan Laporan Lengkap via Email</h4>
+                  <p className="text-sm text-slate-600 mb-4">
+                    Dapatkan metode belajar yang cocok, rekomendasi karir, dan tips belajar efektif berdasarkan gaya belajarmu.
+                  </p>
+                  <button
+                    onClick={() => setShowEmailInput(true)}
+                    className="bg-teal-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-600 transition-colors shadow-lg"
+                  >
+                    Kirim Laporan ke Email
+                  </button>
                 </div>
               ) : (
-                <>
-                  <h4 className="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <span>📧</span> Masukkan Email Kamu
-                  </h4>
-                  <div className="flex gap-2">
-                    <input
-                      type="email"
-                      placeholder="nama@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-teal-400 focus:outline-none"
-                      disabled={emailStatus === 'loading'}
-                    />
-                    <button
-                      onClick={handleSendEmail}
-                      disabled={emailStatus === 'loading'}
-                      className="bg-teal-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      {emailStatus === 'loading' ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Mengirim...
-                        </>
-                      ) : (
-                        'Kirim'
+                <div>
+                  {emailStatus === 'success' ? (
+                    <div className="text-center">
+                      <div className="text-5xl mb-3">✅</div>
+                      <h4 className="text-lg font-bold text-green-700 mb-2">Email Terkirim!</h4>
+                      <p className="text-sm text-slate-600">Cek inbox kamu untuk laporan lengkapnya.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <h4 className="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <span>📧</span> Masukkan Email Kamu
+                      </h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          placeholder="nama@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-teal-400 focus:outline-none"
+                          disabled={emailStatus === 'loading'}
+                        />
+                        <button
+                          onClick={handleSendEmail}
+                          disabled={emailStatus === 'loading'}
+                          className="bg-teal-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {emailStatus === 'loading' ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                              Mengirim...
+                            </>
+                          ) : (
+                            'Kirim'
+                          )}
+                        </button>
+                      </div>
+                      {emailStatus === 'error' && (
+                        <p className="text-red-500 text-sm mt-2">Email tidak valid atau gagal mengirim. Coba lagi.</p>
                       )}
-                    </button>
-                  </div>
-                  {emailStatus === 'error' && (
-                    <p className="text-red-500 text-sm mt-2">Email tidak valid atau gagal mengirim. Coba lagi.</p>
+                      <p className="text-xs text-slate-500 mt-3">
+                        🔒 Email kamu aman dan hanya digunakan untuk mengirim laporan.
+                      </p>
+                    </>
                   )}
-                  <p className="text-xs text-slate-500 mt-3">
-                    🔒 Email kamu aman dan hanya digunakan untuk mengirim laporan.
-                  </p>
-                </>
+                </div>
               )}
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         <div className="mt-8 flex justify-center gap-4 flex-wrap">
            <button
@@ -254,13 +281,15 @@ function VARKView({ onBack, onChat }) {
           >
             Selesai
           </button>
-           <button
-            onClick={() => onChat(result)}
-            className="bg-violet-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-violet-600 transition-colors shadow-lg shadow-violet-200 flex items-center gap-2"
-          >
-            <MessageCircle size={18} />
-            Diskusikan dengan Kai
-          </button>
+           {!isGated && (
+             <button
+              onClick={() => onChat(result)}
+              className="bg-violet-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-violet-600 transition-colors shadow-lg shadow-violet-200 flex items-center gap-2"
+            >
+              <MessageCircle size={18} />
+              Diskusikan dengan Kai
+            </button>
+           )}
         </div>
       </div>
     );

@@ -20,6 +20,7 @@ import {
 import { getRimbQuestions, calculateRIASECRimbScore } from '../../data/riasec_rimb_data';
 import { saveAssessmentResult, checkAuthStatus } from '../../services/assessmentService';
 import ShareableResult from './ShareableResult';
+import GateOverlay from './GateOverlay';
 
 /**
  * RIASECView - Komponen tes minat karir Holland Code (RIMB Style)
@@ -154,7 +155,7 @@ function RIASECView({ onBack, onChat }) {
   }
 
   if (showResult && result) {
-    return <RIASECResult result={result} onBack={onBack} onChat={onChat} saveStatus={saveStatus} completedAt={completedAt} />;
+    return <RIASECResult result={result} onBack={onBack} onChat={onChat} saveStatus={saveStatus} completedAt={completedAt} isLoggedIn={isLoggedIn} />;
   }
 
   // Show loading while questions are being generated
@@ -300,8 +301,9 @@ function RIASECView({ onBack, onChat }) {
 /**
  * RIASEC Result Component
  */
-function RIASECResult({ result, onBack, onChat, saveStatus, completedAt }) {
+function RIASECResult({ result, onBack, onChat, saveStatus, completedAt, isLoggedIn }) {
   const { hollandCode, primaryType, allScores, primaryInfo, typeBreakdown } = result;
+  const isGated = !isLoggedIn;
 
   // Email collection state
   const [email, setEmail] = useState('');
@@ -415,202 +417,212 @@ function RIASECResult({ result, onBack, onChat, saveStatus, completedAt }) {
         </div>
       </div>
 
-      {/* Career Recommendations */}
-      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[2rem] p-8 mb-6 border-2 border-purple-100">
-        <div className="flex items-center gap-2 mb-4">
-          <Briefcase size={24} className="text-purple-600" />
-          <h3 className="text-2xl font-bold text-slate-800">Rekomendasi Karir</h3>
-        </div>
-        <p className="text-slate-600 mb-4">Berdasarkan tipe utamamu ({primaryType}), karir-karir ini cocok banget sama kamu:</p>
-        <div className="flex flex-wrap gap-3">
-          {primaryInfo.jobs.map((job) => (
-            <span
-              key={job}
-              className="bg-white px-4 py-2 rounded-full text-sm font-semibold text-slate-700 border border-purple-200 shadow-sm"
-            >
-              {job}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Strengths & Advice */}
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
-          <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2">
-            <Sparkles size={18} />
-            Kelebihan Kamu
-          </h4>
-          <ul className="space-y-2">
-            {primaryInfo.strengths.map((strength) => (
-              <li key={strength} className="text-sm text-blue-700 flex items-start gap-2">
-                <span className="text-blue-500 mt-0.5">✓</span>
-                {strength}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bg-green-50 rounded-2xl p-6 border border-green-100">
-          <h4 className="font-bold text-green-800 mb-3">💡 Saran Karir</h4>
-          <p className="text-sm text-green-700 leading-relaxed">{primaryInfo.advice}</p>
-        </div>
-      </div>
-
-      {/* Save Status Messages */}
-      {saveStatus === 'requires_login' && (
-        <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-          <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-bold text-amber-800 mb-1">Login Diperlukan</p>
-            <p className="text-xs text-amber-700 mb-3">Silakan login untuk menyimpan hasil tes kamu secara permanen.</p>
-            <button
-              onClick={() => (window.location.href = '/login')}
-              className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-600 transition-colors"
-            >
-              <LogIn size={16} />
-              Login Sekarang
-            </button>
-          </div>
-        </div>
-      )}
-
-      {saveStatus === 'success' && (
-        <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-2xl p-4 flex items-center gap-3">
-          <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
-          <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan!</p>
-        </div>
-      )}
-
-      {saveStatus === 'error' && (
-        <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-2xl p-4 flex items-center gap-3">
-          <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
-          <p className="text-sm font-bold text-red-800">Gagal menyimpan hasil tes. Hasil tetap ditampilkan di bawah.</p>
-        </div>
-      )}
-
-      {/* Shareable Result Card */}
-      <div className="mb-8">
-        <ShareableResult
-          testType="RIASEC"
-          result={{
-            code: hollandCode,
-            category: primaryInfo.title,
-            description: primaryInfo.desc
-          }}
-          userName="Kamu"
-          completedAt={completedAt}
+      {/* Gated content: Career Recommendations, Strengths, Advice, Save Status, Shareable, Email, Chat */}
+      {isGated ? (
+        <GateOverlay
+          testName="RIASEC"
+          preview={{ title: hollandCode, subtitle: primaryInfo.title }}
         />
-      </div>
-
-      {/* Email Collection Section */}
-      {!showEmailInput ? (
-        <div className="mb-8">
-          <button
-            onClick={() => setShowEmailInput(true)}
-            className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
-          >
-            <Mail size={20} />
-            Kirim Laporan Lengkap ke Email
-          </button>
-          <p className="text-xs text-slate-400 text-center mt-2">
-            Dapatkan analisa detail, tips karir, & rekomendasi sumber belajar
-          </p>
-        </div>
       ) : (
-        <div className="mb-8 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-100">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-bold text-blue-800 flex items-center gap-2">
-              <Mail size={18} />
-              Kirim Laporan ke Email
-            </h4>
-            {emailStatus !== 'idle' && (
-              <button
-                onClick={() => setShowEmailInput(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X size={16} />
-              </button>
-            )}
+        <>
+          {/* Career Recommendations */}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-[2rem] p-8 mb-6 border-2 border-purple-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Briefcase size={24} className="text-purple-600" />
+              <h3 className="text-2xl font-bold text-slate-800">Rekomendasi Karir</h3>
+            </div>
+            <p className="text-slate-600 mb-4">Berdasarkan tipe utamamu ({primaryType}), karir-karir ini cocok banget sama kamu:</p>
+            <div className="flex flex-wrap gap-3">
+              {primaryInfo.jobs.map((job) => (
+                <span
+                  key={job}
+                  className="bg-white px-4 py-2 rounded-full text-sm font-semibold text-slate-700 border border-purple-200 shadow-sm"
+                >
+                  {job}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {emailStatus === 'success' ? (
-            <div className="text-center py-4">
-              <CheckCircle2 size={32} className="text-green-500 mx-auto mb-2" />
-              <p className="font-bold text-green-700">Laporan berhasil dikirim!</p>
-              <p className="text-sm text-slate-600">Cek inbox email kamu.</p>
-            </div>
-          ) : (
-            <>
-              <p className="text-sm text-slate-600 mb-3">
-                Masukkan email untuk menerima laporan lengkap termasuk:
-              </p>
-              <ul className="text-xs text-slate-500 mb-4 space-y-1">
-                <li>• Analisa mendalam tipe karirmu</li>
-                <li>• Tips mengembangkan potensi diri</li>
-                <li>• Rekomendasi kursus & sumber belajar</li>
-                <li>• Panduan langkah selanjutnya</li>
+          {/* Strengths & Advice */}
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+              <h4 className="font-bold text-blue-800 mb-3 flex items-center gap-2">
+                <Sparkles size={18} />
+                Kelebihan Kamu
+              </h4>
+              <ul className="space-y-2">
+                {primaryInfo.strengths.map((strength) => (
+                  <li key={strength} className="text-sm text-blue-700 flex items-start gap-2">
+                    <span className="text-blue-500 mt-0.5">✓</span>
+                    {strength}
+                  </li>
+                ))}
               </ul>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="email@contoh.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setEmailStatus('idle');
-                  }}
-                  className={`flex-1 px-4 py-3 rounded-xl border-2 text-sm transition-all ${
-                    emailStatus === 'error'
-                      ? 'border-red-300 bg-red-50 text-red-700'
-                      : 'border-slate-200 bg-white focus:border-blue-300 focus:outline-none'
-                  }`}
-                  disabled={emailStatus === 'loading'}
-                />
+            </div>
+
+            <div className="bg-green-50 rounded-2xl p-6 border border-green-100">
+              <h4 className="font-bold text-green-800 mb-3">💡 Saran Karir</h4>
+              <p className="text-sm text-green-700 leading-relaxed">{primaryInfo.advice}</p>
+            </div>
+          </div>
+
+          {/* Save Status Messages */}
+          {saveStatus === 'requires_login' && (
+            <div className="mb-6 bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+              <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-amber-800 mb-1">Login Diperlukan</p>
+                <p className="text-xs text-amber-700 mb-3">Silakan login untuk menyimpan hasil tes kamu secara permanen.</p>
                 <button
-                  onClick={handleSendReport}
-                  disabled={emailStatus === 'loading'}
-                  className={`px-6 py-3 rounded-xl font-bold text-white transition-all ${
-                    emailStatus === 'loading'
-                      ? 'bg-slate-400 cursor-not-allowed'
-                      : 'bg-blue-500 hover:bg-blue-600'
-                  }`}
+                  onClick={() => (window.location.href = '/login')}
+                  className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-amber-600 transition-colors"
                 >
-                  {emailStatus === 'loading' ? (
-                    'Mengirim...'
-                  ) : emailStatus === 'error' ? (
-                    'Coba Lagi'
-                  ) : (
-                    'Kirim'
-                  )}
+                  <LogIn size={16} />
+                  Login Sekarang
                 </button>
               </div>
-              {emailStatus === 'error' && (
-                <p className="text-xs text-red-500 mt-2">
-                  Gagal mengirim. Coba lagi atau hubungi admin.
-                </p>
-              )}
-            </>
+            </div>
           )}
-        </div>
-      )}
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <button
-          onClick={onBack}
-          className="flex-1 bg-white border-2 border-slate-200 text-slate-600 py-4 rounded-xl font-bold hover:border-orange-200 hover:text-orange-500 transition-all"
-        >
-          Selesai
-        </button>
-        <button
-          onClick={() => onChat(result)}
-          className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
-        >
-          <MessageCircle size={20} />
-          Diskusikan dengan Kai
-        </button>
-      </div>
+          {saveStatus === 'success' && (
+            <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-2xl p-4 flex items-center gap-3">
+              <CheckCircle2 size={20} className="text-green-600 flex-shrink-0" />
+              <p className="text-sm font-bold text-green-800">Hasil tes berhasil disimpan!</p>
+            </div>
+          )}
+
+          {saveStatus === 'error' && (
+            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-2xl p-4 flex items-center gap-3">
+              <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
+              <p className="text-sm font-bold text-red-800">Gagal menyimpan hasil tes. Hasil tetap ditampilkan di bawah.</p>
+            </div>
+          )}
+
+          {/* Shareable Result Card */}
+          <div className="mb-8">
+            <ShareableResult
+              testType="RIASEC"
+              result={{
+                code: hollandCode,
+                category: primaryInfo.title,
+                description: primaryInfo.desc
+              }}
+              userName="Kamu"
+              completedAt={completedAt}
+            />
+          </div>
+
+          {/* Email Collection Section */}
+          {!showEmailInput ? (
+            <div className="mb-8">
+              <button
+                onClick={() => setShowEmailInput(true)}
+                className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <Mail size={20} />
+                Kirim Laporan Lengkap ke Email
+              </button>
+              <p className="text-xs text-slate-400 text-center mt-2">
+                Dapatkan analisa detail, tips karir, & rekomendasi sumber belajar
+              </p>
+            </div>
+          ) : (
+            <div className="mb-8 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 border-2 border-blue-100">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-bold text-blue-800 flex items-center gap-2">
+                  <Mail size={18} />
+                  Kirim Laporan ke Email
+                </h4>
+                {emailStatus !== 'idle' && (
+                  <button
+                    onClick={() => setShowEmailInput(false)}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {emailStatus === 'success' ? (
+                <div className="text-center py-4">
+                  <CheckCircle2 size={32} className="text-green-500 mx-auto mb-2" />
+                  <p className="font-bold text-green-700">Laporan berhasil dikirim!</p>
+                  <p className="text-sm text-slate-600">Cek inbox email kamu.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600 mb-3">
+                    Masukkan email untuk menerima laporan lengkap termasuk:
+                  </p>
+                  <ul className="text-xs text-slate-500 mb-4 space-y-1">
+                    <li>• Analisa mendalam tipe karirmu</li>
+                    <li>• Tips mengembangkan potensi diri</li>
+                    <li>• Rekomendasi kursus & sumber belajar</li>
+                    <li>• Panduan langkah selanjutnya</li>
+                  </ul>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      placeholder="email@contoh.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setEmailStatus('idle');
+                      }}
+                      className={`flex-1 px-4 py-3 rounded-xl border-2 text-sm transition-all ${
+                        emailStatus === 'error'
+                          ? 'border-red-300 bg-red-50 text-red-700'
+                          : 'border-slate-200 bg-white focus:border-blue-300 focus:outline-none'
+                      }`}
+                      disabled={emailStatus === 'loading'}
+                    />
+                    <button
+                      onClick={handleSendReport}
+                      disabled={emailStatus === 'loading'}
+                      className={`px-6 py-3 rounded-xl font-bold text-white transition-all ${
+                        emailStatus === 'loading'
+                          ? 'bg-slate-400 cursor-not-allowed'
+                          : 'bg-blue-500 hover:bg-blue-600'
+                      }`}
+                    >
+                      {emailStatus === 'loading' ? (
+                        'Mengirim...'
+                      ) : emailStatus === 'error' ? (
+                        'Coba Lagi'
+                      ) : (
+                        'Kirim'
+                      )}
+                    </button>
+                  </div>
+                  {emailStatus === 'error' && (
+                    <p className="text-xs text-red-500 mt-2">
+                      Gagal mengirim. Coba lagi atau hubungi admin.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={onBack}
+              className="flex-1 bg-white border-2 border-slate-200 text-slate-600 py-4 rounded-xl font-bold hover:border-orange-200 hover:text-orange-500 transition-all"
+            >
+              Selesai
+            </button>
+            <button
+              onClick={() => onChat(result)}
+              className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              <MessageCircle size={20} />
+              Diskusikan dengan Kai
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Disclaimer */}
       <div className="mt-8 bg-slate-50 rounded-2xl p-6 text-center text-xs text-slate-500 border border-slate-100">

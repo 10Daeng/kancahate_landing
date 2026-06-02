@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Lock, Mail, User, AlertTriangle, Loader2, Sparkles, ArrowLeft, KeyRound } from 'lucide-react';
 import { signIn, getSession } from 'next-auth/react';
@@ -41,10 +41,20 @@ function FloatingEmoji({ emoji, style }) {
   );
 }
 
-export default function LoginPage() {
+function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [step, setStep] = useState(1); // 1: Login/Register, 2: OTP
+
+  // Baca referral code dan action dari URL
+  const refCode = searchParams.get('ref') || '';
+  const action = searchParams.get('action') || '';
+
+  // Auto-switch ke tab Register jika datang dari GateOverlay
+  useEffect(() => {
+    if (action === 'register') setIsLogin(false);
+  }, [action]);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -73,7 +83,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, turnstileToken }),
+        body: JSON.stringify({ name, email, password, turnstileToken, referredBy: refCode || undefined }),
       });
       
       const data = await res.json();
@@ -567,5 +577,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-violet-200 border-t-violet-600 animate-spin" /></div>}>
+      <LoginPage />
+    </Suspense>
   );
 }
