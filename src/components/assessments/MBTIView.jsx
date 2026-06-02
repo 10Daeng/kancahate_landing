@@ -118,69 +118,53 @@ function MBTIView({ onBack, onChat }) {
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
 
-        {/* Preview tipe — selalu ditampilkan */}
-        <div className="bg-white rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-xl overflow-hidden relative mb-6">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="md:w-1/3 text-center">
-              <div className="text-9xl font-black text-transparent bg-clip-text bg-gradient-to-br from-orange-400 to-rose-500 mb-2">
-                {result.type}
-              </div>
-              <div className="text-xl font-bold text-slate-800 tracking-widest uppercase mb-2">{typeInfo.name}</div>
-              {/* Traits hanya tampil jika sudah login */}
-              {!isGated && (
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {typeInfo.traits.map(t => (
-                    <span key={t} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">{t}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Detail — di-gate jika belum login */}
-            {isGated ? (
-              <div className="md:w-2/3 w-full">
-                <GateOverlay
-                  testName="MBTI"
-                  preview={{ title: result.type, subtitle: typeInfo.name }}
-                />
-              </div>
-            ) : (
-              <div className="md:w-2/3">
-                <h3 className="text-2xl font-bold text-slate-800 mb-4">Si {typeInfo.name}</h3>
-                <p className="text-slate-600 leading-relaxed text-lg mb-6">{typeInfo.desc}</p>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="w-8 font-bold text-slate-400">E</span>
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-400" style={{ width: `${(result.scores.E + result.scores.I) > 0 ? (result.scores.E / (result.scores.E + result.scores.I)) * 100 : 50}%` }}></div>
-                    </div>
-                    <span className="w-8 font-bold text-slate-400 text-right">I</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="w-8 font-bold text-slate-400">S</span>
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-yellow-400" style={{ width: `${(result.scores.S + result.scores.N) > 0 ? (result.scores.S / (result.scores.S + result.scores.N)) * 100 : 50}%` }}></div>
-                    </div>
-                    <span className="w-8 font-bold text-slate-400 text-right">N</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="w-8 font-bold text-slate-400">T</span>
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-green-400" style={{ width: `${(result.scores.T + result.scores.F) > 0 ? (result.scores.T / (result.scores.T + result.scores.F)) * 100 : 50}%` }}></div>
-                    </div>
-                    <span className="w-8 font-bold text-slate-400 text-right">F</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="w-8 font-bold text-slate-400">J</span>
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-400" style={{ width: `${(result.scores.J + result.scores.P) > 0 ? (result.scores.J / (result.scores.J + result.scores.P)) * 100 : 50}%` }}></div>
-                    </div>
-                    <span className="w-8 font-bold text-slate-400 text-right">P</span>
-                  </div>
-                </div>
-              </div>
-            )}
+        {isGated ? (
+          <div className="bg-white rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-xl overflow-hidden relative mb-6">
+            <GateOverlay
+              testName="MBTI"
+              preview={{ title: result.type, subtitle: typeInfo.name }}
+            />
           </div>
+        ) : (
+          <>
+            <div className="mb-8">
+              <ShareableResult testType="MBTI" result={{ type: result.type, description: typeInfo.desc }} userName="Kamu" completedAt={completedAt} />
+            </div>
+            <div className="bg-white rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-xl overflow-hidden relative mb-6">
+              <h3 className="text-2xl font-bold text-slate-800 mb-6 text-center">Analisis Dimensi Kepribadian</h3>
+              <div className="space-y-6 max-w-lg mx-auto">
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="w-8 font-bold text-slate-400">E</span>
+                  <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-400" style={{ width: `${(result.scores.E + result.scores.I) > 0 ? (result.scores.E / (result.scores.E + result.scores.I)) * 100 : 50}%` }}></div>
+                  </div>
+                  <span className="w-8 font-bold text-slate-400 text-right">I</span>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="w-8 font-bold text-slate-400">S</span>
+                  <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-yellow-400" style={{ width: `${(result.scores.S + result.scores.N) > 0 ? (result.scores.S / (result.scores.S + result.scores.N)) * 100 : 50}%` }}></div>
+                  </div>
+                  <span className="w-8 font-bold text-slate-400 text-right">N</span>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="w-8 font-bold text-slate-400">T</span>
+                  <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-400" style={{ width: `${(result.scores.T + result.scores.F) > 0 ? (result.scores.T / (result.scores.T + result.scores.F)) * 100 : 50}%` }}></div>
+                  </div>
+                  <span className="w-8 font-bold text-slate-400 text-right">F</span>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="w-8 font-bold text-slate-400">J</span>
+                  <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-400" style={{ width: `${(result.scores.J + result.scores.P) > 0 ? (result.scores.J / (result.scores.J + result.scores.P)) * 100 : 50}%` }}></div>
+                  </div>
+                  <span className="w-8 font-bold text-slate-400 text-right">P</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
           {/* Save success / error banner — hanya tampil jika sudah login */}
           {!isGated && saveStatus === 'success' && (
@@ -225,9 +209,7 @@ function MBTIView({ onBack, onChat }) {
                   </div>
                 )}
               </div>
-              <div className="mt-8">
-                <ShareableResult testType="MBTI" result={{ type: result.type, description: typeInfo.desc }} userName="Kamu" completedAt={completedAt} />
-              </div>
+
             </>
           )}
 
@@ -239,7 +221,6 @@ function MBTIView({ onBack, onChat }) {
               </button>
             )}
           </div>
-        </div>
       </div>
     );
   }

@@ -39,19 +39,19 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
   const getTestConfig = (testType) => {
     const configs = {
       GAD7: {
-        gradient: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
+        gradient: 'linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #5eead4 100%)',
         emoji: '🧠',
         title: 'Tingkat Kecemasan',
         textColor: 'white',
       },
       PSS10: {
-        gradient: 'linear-gradient(135deg, #ea580c 0%, #f97316 50%, #fdba74 100%)',
+        gradient: 'linear-gradient(135deg, #c2410c 0%, #f97316 50%, #fdba74 100%)',
         emoji: '😰',
         title: 'Tingkat Stres',
         textColor: 'white',
       },
       MBTI: {
-        gradient: 'linear-gradient(135deg, #7e22ce 0%, #a855f7 50%, #f472b6 100%)',
+        gradient: 'linear-gradient(135deg, #6b21a8 0%, #a855f7 50%, #f472b6 100%)',
         emoji: '🎭',
         title: 'Tipe Kepribadian',
         textColor: 'white',
@@ -87,7 +87,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
         textColor: 'white',
       },
       MI: {
-        gradient: 'linear-gradient(135deg, #4338ca 0%, #6366f1 50%, #a5b4fc 100%)',
+        gradient: 'linear-gradient(135deg, #3730a3 0%, #6366f1 50%, #a5b4fc 100%)',
         emoji: '🧠',
         title: 'Multiple Intelligence',
         textColor: 'white',
@@ -129,16 +129,17 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
     }
   };
 
-  const getScoreDisplay = (testType, result) => {
+  const getScoreData = (testType, result) => {
     if (result.score === undefined) return null;
     const maxScores = { GAD7: 21, PSS10: 40, PHQ9: 27, ROSENBERG: 40 };
-    const maxScore = maxScores[testType] || '-';
-    return `${result.score}/${maxScore}`;
+    const max = maxScores[testType];
+    if (!max) return null;
+    return { score: result.score, max: max, percentage: Math.min(100, Math.round((result.score / max) * 100)) };
   };
 
   const config = getTestConfig(testType);
   const labelInfo = getLabelInfo(testType, result);
-  const scoreDisplay = getScoreDisplay(testType, result);
+  const scoreData = getScoreData(testType, result);
   const description = result.description || result.desc || labelInfo.desc;
 
   // Copy link
@@ -152,7 +153,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
   // Share email
   const handleShareEmail = () => {
     const subject = `Hasil Tes ${config.title} - ${labelInfo.label}`;
-    const body = `Aku baru saja tes ${config.title} di Kancah Ate!\n\nHasilku: ${labelInfo.label}\n${scoreDisplay ? `Skor: ${scoreDisplay}\n` : ''}${description}\n\nCoba tesnya di: ${window.location.href}`;
+    const body = `Aku baru saja tes ${config.title} di Kancah Ate!\n\nHasilku: ${labelInfo.label}\n${description}\n\nCoba tesnya di: ${window.location.href}`;
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
@@ -210,13 +211,6 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
             flexDirection: 'column'
           }}
         >
-          {/* Subtle pattern overlay for texture (html2canvas safe) */}
-          <div style={{
-            position: 'absolute', inset: 0, opacity: 0.1,
-            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-            backgroundSize: '24px 24px'
-          }}></div>
-
           {/* TOP BAR: Test Title Badge (Left) & Kancah Ate Logo (Right) */}
           <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -239,20 +233,17 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
               <span>{config.title}</span>
             </div>
 
-            {/* Logo Kancah Ate (Right side as requested) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: '28px', height: '28px',
-                background: 'rgba(255,255,255,0.95)',
-                borderRadius: '8px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-              }}>
-                <span style={{ color: '#f97316', fontSize: '11px', fontWeight: 900 }}>KA</span>
-              </div>
+            {/* Logo Kancah Ate Asli */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.95)', padding: '6px 10px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              <img 
+                src="/logo.png" 
+                alt="Logo Kancah Ate" 
+                crossOrigin="anonymous" 
+                style={{ width: '20px', height: '20px', objectFit: 'contain' }} 
+              />
               <div style={{
                 fontSize: '13px', fontWeight: 800,
-                letterSpacing: '0.5px', opacity: 0.95
+                letterSpacing: '0.5px', color: '#1e293b'
               }}>
                 Kancah Ate
               </div>
@@ -280,38 +271,49 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
             <div style={{
               fontSize: '12px',
               fontWeight: 800,
-              letterSpacing: '2px',
+              letterSpacing: '3px',
               textTransform: 'uppercase',
-              opacity: 0.8,
-              marginBottom: '8px'
+              opacity: 0.9,
+              marginBottom: '12px'
             }}>
               Hasil Tes Kamu
             </div>
 
             {/* Main Result Label */}
             <h1 style={{
-              fontSize: '38px',
+              fontSize: labelInfo.label.length > 15 ? '36px' : '48px', // Dinamis jika kata panjang
               fontWeight: 900,
-              lineHeight: 1.1,
-              letterSpacing: '-1px',
-              marginBottom: scoreDisplay ? '16px' : '32px',
-              textShadow: '0 4px 12px rgba(0,0,0,0.15)'
+              lineHeight: 1.05,
+              letterSpacing: '-1.5px',
+              marginBottom: scoreData ? '24px' : '32px',
+              textShadow: '0 8px 16px rgba(0,0,0,0.2)'
             }}>
               {labelInfo.label.toUpperCase()}
             </h1>
 
-            {/* Score Pill (if applicable) */}
-            {scoreDisplay && (
-              <div style={{
-                background: 'rgba(0,0,0,0.15)',
-                padding: '8px 20px',
-                borderRadius: '24px',
-                fontSize: '18px',
-                fontWeight: 800,
-                marginBottom: '32px',
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}>
-                Skor: {scoreDisplay}
+            {/* Progress Bar Score (Replacing text score) */}
+            {scoreData && (
+              <div style={{ width: '100%', maxWidth: '240px', marginBottom: '36px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, marginBottom: '6px', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <span>Intensitas</span>
+                  <span>{scoreData.percentage}%</span>
+                </div>
+                <div style={{
+                  height: '8px',
+                  width: '100%',
+                  background: 'rgba(0,0,0,0.15)',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${scoreData.percentage}%`,
+                    background: testType === 'ROSENBERG' ? '#ca8a04' : 'white', // warna kontras
+                    borderRadius: '10px',
+                    boxShadow: '0 0 10px rgba(255,255,255,0.5)'
+                  }}></div>
+                </div>
               </div>
             )}
 
@@ -329,7 +331,7 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
               <p style={{
                 fontSize: '15px',
                 lineHeight: 1.6,
-                fontWeight: 500,
+                fontWeight: 600,
                 margin: 0,
                 textShadow: '0 1px 2px rgba(0,0,0,0.05)'
               }}>
@@ -345,14 +347,14 @@ export default function ShareableResult({ testType, result, userName = 'Kamu', c
             display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
             opacity: 0.8
           }}>
-            <div style={{ fontSize: '13px', fontWeight: 600 }}>
+            <div style={{ fontSize: '13px', fontWeight: 700 }}>
               {userName}
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '1px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '1.5px' }}>
                 KANCAHATE.MY.ID
               </div>
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px', fontWeight: 600 }}>
                 {currentDate}
               </div>
             </div>

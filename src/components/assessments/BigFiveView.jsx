@@ -131,17 +131,28 @@ function BigFiveView({ onBack, onChat }) {
         <button onClick={onBack} className="mb-6 flex items-center gap-2 text-slate-500 hover:text-orange-500 transition-colors">
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
-        
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4 text-slate-900">Hasil Tes Kepribadian Big Five</h2>
-        </div>
-
         {isGated ? (
           <GateOverlay
             testName="Big Five"
             preview={{ title: 'Profil Big Five Kamu', subtitle: '5 dimensi kepribadian' }}
           />
-        ) : (<>
+        ) : (
+          <>
+            <div className="mb-8">
+              <ShareableResult
+                testType="BigFive"
+                result={{
+                  dominant: Object.entries(results.scores).sort((a, b) => b[1] - a[1])[0][0],
+                  description: `Dominan: ${BIG_FIVE_TYPES[Object.entries(results.scores).sort((a, b) => b[1] - a[1])[0][0]].name}`
+                }}
+                userName="Kamu"
+                completedAt={completedAt}
+              />
+            </div>
+            
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold mb-2 text-slate-900">Analisis Dimensi Kepribadian</h3>
+            </div>
         <div className="grid md:grid-cols-2 gap-6">
           {Object.entries(results.scores).map(([domain, score]) => {
             const typeInfo = BIG_FIVE_TYPES[domain];
@@ -206,18 +217,7 @@ function BigFiveView({ onBack, onChat }) {
           </div>
         )}
 
-        {/* Shareable Result Card */}
-        <div className="mt-8">
-          <ShareableResult
-            testType="BigFive"
-            result={{
-              dominant: Object.entries(results.scores).sort((a, b) => b[1] - a[1])[0][0],
-              description: `Dominan: ${BIG_FIVE_TYPES[Object.entries(results.scores).sort((a, b) => b[1] - a[1])[0][0]].name}`
-            }}
-            userName="Kamu"
-            completedAt={completedAt}
-          />
-        </div>
+
 
         {/* Email Collection Section */}
         <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-100 rounded-2xl p-6">

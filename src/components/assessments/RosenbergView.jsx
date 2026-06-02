@@ -199,48 +199,7 @@ function RosenbergResult({ result, onBack, onChat, saveStatus, completedAt }) {
         <ArrowLeft size={18} /> Kembali ke Beranda
       </button>
 
-      {/* Main Result Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className={`bg-gradient-to-br ${gradient} rounded-[2.5rem] p-10 md:p-12 text-center text-white shadow-2xl mb-8 relative overflow-hidden`}
-      >
-        {/* Decorative Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-60 h-60 bg-white rounded-full translate-x-1/2 translate-y-1/2"></div>
-        </div>
 
-        {/* Result */}
-        <div className="relative z-10">
-          <div className="text-sm font-bold uppercase tracking-widest mb-4 opacity-80">
-            Tingkat Harga Diri
-          </div>
-          <div className="text-6xl md:text-7xl font-black mb-4">{emoji}</div>
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">Harga Diri {level}</h1>
-          <p className="text-lg md:text-xl opacity-90 leading-relaxed max-w-xl mx-auto mb-8">
-            {description}
-          </p>
-
-          {/* Score */}
-          <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 inline-block mb-6">
-            <p className="text-sm opacity-80">Skor Rosenberg</p>
-            <p className="text-3xl font-black">{score} / 40</p>
-            <p className="text-xs opacity-70 mt-1">Rentang: {minScore} - {maxScore}</p>
-          </div>
-
-          {/* Interpretation */}
-          <div className="bg-white/10 rounded-xl p-4 text-left max-w-lg mx-auto">
-            <h3 className="font-bold text-lg mb-2">{interpretation.title}</h3>
-            <div className="space-y-1 text-sm">
-              <p><span className="font-semibold">Kelebihan:</span> {interpretation.strengths.join(', ')}</p>
-              {interpretation.challenges.length > 0 && (
-                <p><span className="font-semibold">Tantangan:</span> {interpretation.challenges.join(', ')}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </motion.div>
 
       {/* Recommendations */}
       <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8 mb-6">

@@ -142,17 +142,27 @@ function VARKView({ onBack, onChat }) {
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
 
-        {/* Preview — selalu ditampilkan */}
-        <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${resultColor} transition-all`}>
-          <h2 className="text-3xl md:text-4xl font-black mb-2">{result.fullTitle}</h2>
-
-          {isGated ? (
+        {isGated ? (
+          <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${resultColor} transition-all`}>
             <GateOverlay
               testName="VARK"
               preview={{ title: result.fullTitle, subtitle: 'Gaya belajar utamamu' }}
             />
-          ) : (
-            <>
+          </div>
+        ) : (
+          <>
+            <div className="mb-8">
+                <ShareableResult
+                testType="VARK"
+                result={{
+                    type: result.title,
+                    description: result.desc
+                }}
+                userName="Kamu"
+                completedAt={completedAt}
+                />
+            </div>
+            <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${resultColor} transition-all`}>
               <p className="text-lg font-medium leading-relaxed mb-6 opacity-90">{result.desc}</p>
 
               {/* Strength Badge */}
@@ -188,24 +198,13 @@ function VARKView({ onBack, onChat }) {
                   </div>
                 </div>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
 
         {!isGated && (
           <>
-            {/* Shareable Result Card */}
-            <div className="mt-8">
-                <ShareableResult
-                testType="VARK"
-                result={{
-                    type: result.title,
-                    description: result.desc
-                }}
-                userName="Kamu"
-                completedAt={completedAt}
-                />
-            </div>
+
 
             {/* Email Collection Section */}
             <div className="mt-6 bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-100 rounded-2xl p-6">

@@ -354,42 +354,18 @@ function RIASECResult({ result, onBack, onChat, saveStatus, completedAt, isLogge
       </button>
 
       {/* Main Result Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className={`bg-gradient-to-br ${primaryInfo.gradient} rounded-[2.5rem] p-10 md:p-12 text-center text-white shadow-2xl mb-8 relative overflow-hidden`}
-      >
-        {/* Decorative Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-          <div className="absolute bottom-0 right-0 w-60 h-60 bg-white rounded-full translate-x-1/2 translate-y-1/2"></div>
-        </div>
-
-        {/* Holland Code */}
-        <div className="relative z-10">
-          <div className="text-sm font-bold uppercase tracking-widest mb-4 opacity-80">
-            Kode Karir Holland
-          </div>
-          <h1 className="text-6xl md:text-7xl font-black mb-4">{hollandCode}</h1>
-          <div className="text-4xl md:text-5xl font-bold mb-6">{primaryInfo.emoji}</div>
-          <h2 className="text-3xl md:text-4xl font-extrabold mb-4">{primaryInfo.title}</h2>
-          <p className="text-lg md:text-xl opacity-90 leading-relaxed max-w-xl mx-auto mb-8">
-            {primaryInfo.desc}
-          </p>
-
-          {/* Keywords */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {primaryInfo.keywords.map((keyword) => (
-              <span
-                key={keyword}
-                className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-semibold"
-              >
-                {keyword}
-              </span>
-            ))}
-          </div>
-        </div>
-      </motion.div>
+      <div className="mb-8">
+        <ShareableResult
+          testType="RIASEC"
+          result={{
+            code: hollandCode,
+            category: primaryInfo.title,
+            description: primaryInfo.desc
+          }}
+          userName="Kamu"
+          completedAt={completedAt}
+        />
+      </div>
 
       {/* Type Breakdown (All 6 Types) */}
       <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8 mb-6">
@@ -499,19 +475,7 @@ function RIASECResult({ result, onBack, onChat, saveStatus, completedAt, isLogge
             </div>
           )}
 
-          {/* Shareable Result Card */}
-          <div className="mb-8">
-            <ShareableResult
-              testType="RIASEC"
-              result={{
-                code: hollandCode,
-                category: primaryInfo.title,
-                description: primaryInfo.desc
-              }}
-              userName="Kamu"
-              completedAt={completedAt}
-            />
-          </div>
+
 
           {/* Email Collection Section */}
           {!showEmailInput ? (

@@ -75,20 +75,7 @@ function GAD7View({ onBack, onChat }) {
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
         
-        <div className={`rounded-[2rem] p-8 md:p-12 border shadow-lg text-center ${result.color}`}>
-          <h2 className="text-4xl font-black mb-2">{result.category}</h2>
-          <div className="text-6xl font-bold mb-4 opacity-80">{result.totalScore}<span className="text-2xl font-normal">/21</span></div>
-          <p className="text-lg font-medium leading-relaxed mb-8">{result.description}</p>
-          
-          <div className="bg-white/50 p-6 rounded-2xl backdrop-blur-sm">
-             <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-3">Rekomendasi</h4>
-             <p className="text-slate-700">
-               {result.totalScore > 9 ? 
-                 "Skormu mengindikasikan kecemasan yang cukup signifikan. Jangan ragu untuk mencari bantuan profesional atau curhat ke Kai, ya. Kadang kita cuma butuh didengar." : 
-                 "Kecemasanmu masih dalam batas wajar. Latihan pernapasan dan mindfulness bisa membantu menjaga ketenanganmu."}
-             </p>
-          </div>
-        </div>
+
 
         {/* Save Status Message */}
         {saveStatus === 'requires_login' && (

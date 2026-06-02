@@ -126,32 +126,16 @@ function MultipleIntelligenceView({ onBack, onChat }) {
           <ArrowLeft size={18} /> Kembali ke Beranda
         </button>
 
-        {/* Preview — selalu ditampilkan */}
-        <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${result.color} transition-all`}>
-          <h2 className="text-3xl md:text-4xl font-black mb-4">{result.title}</h2>
-
-          {isGated ? (
+        {isGated ? (
+          <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${result.color} transition-all`}>
             <GateOverlay
               testName="Multiple Intelligence"
               preview={{ title: result.title, subtitle: 'Kecerdasan dominanmu' }}
             />
-          ) : (
-            <>
-              <p className="text-lg font-medium leading-relaxed mb-8 opacity-90">{result.desc}</p>
-              <div className="bg-white/60 p-6 rounded-2xl backdrop-blur-sm border border-white/50">
-                <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-3">Insight Untukmu</h4>
-                <p className="text-slate-800 font-medium">
-                  {result.advice}
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-
-        {!isGated && (
+          </div>
+        ) : (
           <>
-            {/* Shareable Result Card */}
-            <div className="mt-8">
+            <div className="mb-8">
                 <ShareableResult
                 testType="MI"
                 result={{
@@ -162,6 +146,21 @@ function MultipleIntelligenceView({ onBack, onChat }) {
                 completedAt={completedAt}
                 />
             </div>
+            <div className={`rounded-[2rem] p-8 md:p-12 border-2 shadow-sm text-center ${result.color} transition-all`}>
+              <p className="text-lg font-medium leading-relaxed mb-8 opacity-90">{result.desc}</p>
+              <div className="bg-white/60 p-6 rounded-2xl backdrop-blur-sm border border-white/50">
+                <h4 className="font-bold text-sm uppercase tracking-widest opacity-60 mb-3">Insight Untukmu</h4>
+                <p className="text-slate-800 font-medium">
+                  {result.advice}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+
+        {!isGated && (
+          <>
+
 
             {/* Email Collection Section */}
             <div className="mt-6 bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-100 rounded-2xl p-6">
