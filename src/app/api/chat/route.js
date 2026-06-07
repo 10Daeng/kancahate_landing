@@ -6,10 +6,11 @@
 // ============================================================
 
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import { buildSystemPrompt, sanitizeChatHistory } from '@/lib/chatEngine';
 import { detectCrisisLevel } from '@/lib/crisisDetection';
-
-export const runtime = 'edge';
+import { Groq } from 'groq-sdk';
 
 // Simple in-memory rate limiter (15 requests per 60 seconds)
 const rateLimitMap = new Map();
@@ -155,64 +156,71 @@ async function callGroq(history, systemPrompt, stream = false) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     console.error('[Chat API] GROQ_API_KEY not set');
-    return { text: null, error: 'Groq API key not configured' };
+    return { text: null, error: 'api_key_missing' };
   }
 
-  // Convert Gemini history format to OpenAI/Groq format
   const groqMessages = [
     { role: 'system', content: systemPrompt },
     ...history.map(msg => ({
       role: msg.role === 'model' ? 'assistant' : 'user',
-      content: msg.parts?.[0]?.text || ''
+      content: msg.parts[0].text
     }))
   ];
 
   try {
     console.log('[Chat API] Calling Groq LLaMA...');
-    let response;
-    try {
-      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: groqMessages,
-          temperature: 0.7,
-          max_tokens: 1024,
-          top_p: 0.95,
-          stream: stream
-        })
-      });
-    } catch (err) {
-      console.error('[Chat API] Groq fetch failed:', err.message);
-      return { text: null, error: 'groq_fetch_failed' };
-    }
+    const groq = new Groq({ apiKey });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      console.error('[Chat API] Groq Error:', response.status, errData);
-      return { text: null, error: `groq_error_${response.status}` };
-    }
+    const chatCompletion = await groq.chat.completions.create({
+      messages: groqMessages,
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+      max_completion_tokens: 1024,
+      top_p: 0.95,
+      stream: stream,
+      stop: null
+    });
 
     if (stream) {
-      return response; // Return the raw fetch response for streaming
+      // Convert async iterable to Web ReadableStream
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of chatCompletion) {
+              const text = chunk.choices[0]?.delta?.content || '';
+              if (text) {
+                const sseData = `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
+                controller.enqueue(new TextEncoder().encode(sseData));
+              }
+            }
+            controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+            controller.close();
+          } catch (err) {
+            console.error('[Chat API] Stream iteration error:', err);
+            controller.error(err);
+          }
+        }
+      });
+      // Mock fetch Response object since route.js expects a Response
+      return new Response(readableStream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      });
     }
 
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-    
+    const text = chatCompletion.choices[0]?.message?.content;
     if (!text) {
-      return { text: null, error: 'groq_empty_response' };
+      return { text: null, error: 'empty_response' };
     }
 
     console.log('[Chat API] Success with Groq LLaMA');
     return { text, error: null };
   } catch (err) {
-    console.error('[Chat API] Groq fallback failed:', err.message);
-    return { text: null, error: 'groq_network_error' };
+    console.error('[Chat API] Groq SDK error:', err.message);
+    return { text: null, error: 'groq_sdk_error' };
   }
 }
 
