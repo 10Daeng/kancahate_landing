@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
-import { createOrUpdateUser, updateSession, getUserProfile } from '../../services/analyticsService';
+import { createSession, updateSession } from '../../services/analyticsService';
 import { useSpeech } from './hooks/useSpeech';
 import { useChatSession } from './hooks/useChatSession';
 import {
@@ -623,11 +623,29 @@ export default function ChatRoomView({ onBack }) {
         setUserData({ ...updatedData, persona: autoPersona.id });
         setPhase('subtopic');
         setIsTyping(true);
+        
+        // --- EARLY DB SYNC ---
+        // Rekam session di DB sekarang untuk kepentingan analitik (sebelum chat panjang)
+        createSession({
+          session_id: sessionId,
+          user_id: loggedInUser?.id || null, // Nanti diupdate kalau user login
+          category_id: null, // belum dipilih
+          status: 'Started',
+          message_count: messages.length,
+          user_message_count: messages.filter(m => m.role === 'user').length,
+          chat_history: messages,
+          metadata: {
+            identity: updatedData,
+            chat_mode: chatMode,
+            started_at: new Date().toISOString()
+          }
+        }).catch(console.error);
+
         setTimeout(() => {
           setIsTyping(false);
           setMessages(prev => [...prev, {
             role: 'model',
-            parts: [{ text: `Makasih ya, ${updatedData.name}! ✨ Hari ini kamu mau cerita tentang apa? Pilih salah satu atau ketik sendiri.` }],
+            parts: [{ text: `Topik apa yang paling ingin kamu ceritakan kepada Kai hari ini?` }],
             timestamp: new Date().toISOString()
           }]);
         }, 1200);
@@ -749,24 +767,16 @@ export default function ChatRoomView({ onBack }) {
     setIsTyping(false);
     setPhase('finished');
 
-    // Add first message
-    const msgsToAdd = [{
+    const closingMsg = !loggedInUser 
+      ? `Oke sampai jumpa lagi. Terima kasih sudah berbagi cerita dengan Kai 💙\n\nOh iya, kalau kamu mau percakapan kita tersimpan dan bisa dibaca lagi kapan saja, kamu bisa daftar atau login pakai Google-mu lho.`
+      : `Oke sampai jumpa lagi. Terima kasih sudah berbagi cerita dengan Kai 💙`;
+
+    setMessages(prev => [...prev, {
       id: Date.now().toString(),
       role: 'model',
-      parts: [{ text: `Oke sampai jumpa lagi. Terima kasih sudah berbagi cerita dengan Kai 💙` }],
+      parts: [{ text: closingMsg }],
       timestamp: new Date().toISOString()
-    }];
-
-    if (!loggedInUser) {
-      msgsToAdd.push({
-        id: (Date.now() + 1).toString(),
-        role: 'model',
-        parts: [{ text: `Oh iya, kalau kamu mau percakapan kita tersimpan dan bisa dibaca lagi kapan saja, kamu bisa daftar atau login pakai Google-mu lho.` }],
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    setMessages(prev => [...prev, ...msgsToAdd]);
+    }]);
   };
 
   const handleSelesaiTanpaLogin = async () => {
