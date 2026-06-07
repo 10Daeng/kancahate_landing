@@ -12,15 +12,10 @@ export function useSpeech() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // STT init
+    // STT check support
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       setSpeechSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'id-ID';
-      recognitionRef.current = recognition;
     }
 
     // TTS init
@@ -32,11 +27,27 @@ export function useSpeech() {
   }, []);
 
   const startListening = (onTranscript) => {
-    if (!recognitionRef.current) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    
+    // Stop any existing instance
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+    }
+
+    const recognition = new SpeechRecognition();
+    
+    // Pada beberapa browser mobile (seperti iOS Safari), continuous=true sering bermasalah.
+    // Namun kita tetap coba continuous agar user tidak perlu berkali-kali klik.
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'id-ID';
+    
+    recognitionRef.current = recognition;
     
     let finalTranscript = '';
 
-    recognitionRef.current.onresult = (event) => {
+    recognition.onresult = (event) => {
       let interimTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
@@ -48,16 +59,22 @@ export function useSpeech() {
       onTranscript((finalTranscript + interimTranscript).trim());
     };
     
-    recognitionRef.current.onerror = (e) => {
+    recognition.onerror = (e) => {
+      console.error('Speech recognition error:', e.error);
       if (e.error !== 'no-speech') setIsListening(false);
     };
-    recognitionRef.current.onend = () => setIsListening(false);
+    
+    recognition.onend = () => {
+      setIsListening(false);
+      // Jika browser mematikan otomatis (timeout), kita biarkan state berhenti
+    };
     
     try {
-      recognitionRef.current.start();
+      recognition.start();
       setIsListening(true);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to start speech recognition:', e);
+      setIsListening(false);
     }
   };
 
