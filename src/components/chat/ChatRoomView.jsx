@@ -320,7 +320,7 @@ export default function ChatRoomView({ onBack }) {
     clearIdleTimers();
     if (phase === 'cbt_chat') {
       idleTimerRef.current = setTimeout(() => {
-        addBotMessage(`Hai ${userData?.name || 'kamu'}, kamu masih di sana? Kalau kamu butuh waktu buat mikir, santai aja ya. Tapi kalau obrolan ini udah cukup melegakan buatmu, aku izin pamit ya biar sesinya tersimpan dengan aman.`, 1000);
+        addBotMessage(`Hai ${userData?.name || 'kamu'}, kamu masih di sana? Kalau kamu butuh waktu buat mikir, santai aja ya. Tapi kalau obrolan ini udah cukup melegakan buatmu, Kai izin pamit yaa.`, 1000);
         
         promptEndTimerRef.current = setTimeout(() => {
           handleEndSession();
