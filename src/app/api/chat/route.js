@@ -9,6 +9,8 @@ import { NextResponse } from 'next/server';
 import { buildSystemPrompt, sanitizeChatHistory } from '@/lib/chatEngine';
 import { detectCrisisLevel } from '@/lib/crisisDetection';
 
+export const runtime = 'edge';
+
 // Simple in-memory rate limiter (15 requests per 60 seconds)
 const rateLimitMap = new Map();
 function checkRateLimit(ip) {
@@ -167,21 +169,27 @@ async function callGroq(history, systemPrompt, stream = false) {
 
   try {
     console.log('[Chat API] Calling Groq LLaMA...');
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: groqMessages,
-        temperature: 0.7,
-        max_tokens: 1024,
-        top_p: 0.95,
-        stream: stream
-      })
-    });
+    let response;
+    try {
+      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: groqMessages,
+          temperature: 0.7,
+          max_tokens: 1024,
+          top_p: 0.95,
+          stream: stream
+        })
+      });
+    } catch (err) {
+      console.error('[Chat API] Groq fetch failed:', err.message);
+      return { text: null, error: 'groq_fetch_failed' };
+    }
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
