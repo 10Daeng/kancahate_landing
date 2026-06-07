@@ -26,11 +26,6 @@ export async function POST(request) {
       .where(eq(schema.counselingSessions.sessionId, sessionId))
       .returning();
       
-    // Update any chat drafts as well if they exist
-    await db.update(schema.chatDrafts)
-      .set({ userId: session.user.id })
-      .where(eq(schema.chatDrafts.sessionId, sessionId));
-      
     if (result.length > 0) {
       return NextResponse.json({ success: true, message: 'Session linked successfully' });
     } else {
