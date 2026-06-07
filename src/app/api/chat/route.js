@@ -149,7 +149,7 @@ async function callGeminiFallback(history, systemPrompt, maxRetries = 2) {
 /**
  * Utama: Panggil Groq API (LLaMA)
  */
-async function callGroq(history, systemPrompt) {
+async function callGroq(history, systemPrompt, stream = false) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     console.error('[Chat API] GROQ_API_KEY not set');
@@ -178,7 +178,8 @@ async function callGroq(history, systemPrompt) {
         messages: groqMessages,
         temperature: 0.7,
         max_tokens: 1024,
-        top_p: 0.95
+        top_p: 0.95,
+        stream: stream
       })
     });
 
@@ -186,6 +187,10 @@ async function callGroq(history, systemPrompt) {
       const errData = await response.json().catch(() => ({}));
       console.error('[Chat API] Groq Error:', response.status, errData);
       return { text: null, error: `groq_error_${response.status}` };
+    }
+
+    if (stream) {
+      return response; // Return the raw fetch response for streaming
     }
 
     const data = await response.json();
@@ -233,7 +238,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { history, userData, category, currentRiskLevel, mode, action = 'chat' } = body;
+    const { history, userData, category, currentRiskLevel, mode, action = 'chat', useStream = false } = body;
 
     if (!history || !Array.isArray(history)) {
       return NextResponse.json({ error: 'Invalid request: history required' }, { status: 400 });
@@ -318,7 +323,23 @@ PENTING: Feedback harus dalam bahasa Indonesia santai dan tidak menghakimi.
     });
 
     // --- Panggil Groq API (Utama) ---
-    let result = await callGroq(history, systemPrompt);
+    // Gunakan streaming HANYA untuk aksi chat normal
+    const shouldStream = useStream && action === 'chat';
+    
+    let result = await callGroq(history, systemPrompt, shouldStream);
+
+    if (shouldStream && result && result.ok) {
+      // Jika berhasil stream, langsung teruskan response stream ke client
+      const headers = new Headers(result.headers);
+      headers.set('X-Crisis-Level', JSON.stringify(crisisResult));
+      return new Response(result.body, { headers });
+    }
+
+    // Jika streaming gagal atau bukan mode streaming, periksa format error
+    if (shouldStream) {
+      console.warn('[Chat API] Groq stream failed. Falling back to non-streaming Gemini...');
+      // result saat ini berisi object error dari callGroq (jika bukan .ok)
+    }
 
     if (result.error) {
       const geminiResult = await callGeminiFallback(history, systemPrompt);
@@ -343,6 +364,7 @@ PENTING: Feedback harus dalam bahasa Indonesia santai dan tidak menghakimi.
       }
     }
 
+    // Response non-streaming (JSON)
     return NextResponse.json({
       text: result.text,
       crisisLevel: crisisResult,

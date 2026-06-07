@@ -41,18 +41,54 @@ const createRateLimiter = (max = 15, windowMs = 60000) => {
 // --- SERVER-PROXIED AI CALL ---
 // Semua logika sensitif (system prompt, crisis detection, API key)
 // dijalankan di server melalui /api/chat
-async function callChatAPI({ history, userData, category, currentRiskLevel, mode, action = 'chat', question, answer, phase }) {
+async function callChatAPI({ history, userData, category, currentRiskLevel, mode, action = 'chat', question, answer, phase }, onChunk) {
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ history, userData, category, currentRiskLevel, mode, action, question, answer, phase }),
+      body: JSON.stringify({ history, userData, category, currentRiskLevel, mode, action, question, answer, phase, useStream: !!onChunk }),
     });
+
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       return { text: errData.text || 'Maaf, terjadi kesalahan. Coba kirim ulang ya.', crisisLevel: null, isError: true };
     }
-    return await res.json();
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await res.json();
+    }
+
+    // Stream SSE
+    const crisisLevelStr = res.headers.get('X-Crisis-Level');
+    const crisisLevel = crisisLevelStr ? JSON.parse(crisisLevelStr) : null;
+    
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let buffer = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Keep incomplete line in buffer
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line.trim() !== 'data: [DONE]') {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.choices?.[0]?.delta?.content) {
+              text += data.choices[0].delta.content;
+              if (onChunk) onChunk(text);
+            }
+          } catch (e) {}
+        }
+      }
+    }
+    return { text, crisisLevel };
   } catch (err) {
     console.error('[callChatAPI] Network error:', err);
     return { text: 'Koneksi terputus. Periksa internet kamu dan coba lagi ya.', crisisLevel: null, isError: true };
@@ -634,10 +670,17 @@ export default function ChatRoomView({ onBack }) {
       if (explorationCount < 1) {
         setExplorationCount(prev => prev + 1);
         setIsTyping(true);
-        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_exploration' });
+        const msgId = Date.now().toString();
+        setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
+
+        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_exploration' }, (chunk) => {
+          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
+        });
+
         setIsTyping(false);
         processCrisisResult(result.crisisLevel);
-        setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: result.text }] } : m));
+
         if (result.isError) {
           setInput(textToSend);
         } else {
@@ -666,7 +709,12 @@ export default function ChatRoomView({ onBack }) {
           }
         ]);
 
-        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice' });
+        const msgId = Date.now().toString();
+        setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
+
+        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice' }, (chunk) => {
+          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
+        });
         
         setIsTyping(false);
         processCrisisResult(result.crisisLevel);
@@ -677,11 +725,10 @@ export default function ChatRoomView({ onBack }) {
           setAiTriggeredEndSession(true);
         }
         
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: botText }] } : m));
         if (!result.isError) {
-          setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
           speakText(botText);
         } else {
-          setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
           setInput(textToSend);
         }
       }
@@ -707,7 +754,13 @@ export default function ChatRoomView({ onBack }) {
     // =============================================
     if (phase === 'venting') {
       setIsTyping(true);
-      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'venting' });
+      const msgId = Date.now().toString();
+      setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
+
+      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'venting' }, (chunk) => {
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
+      });
+
       setIsTyping(false);
       processCrisisResult(result.crisisLevel);
       
@@ -717,7 +770,7 @@ export default function ChatRoomView({ onBack }) {
         setAiTriggeredEndSession(true);
       }
       
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: botText }] } : m));
       if (result.isError) {
         setInput(textToSend);
       } else {
@@ -731,7 +784,13 @@ export default function ChatRoomView({ onBack }) {
     // =============================================
     if (phase === 'advice_followup') {
       setIsTyping(true);
-      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_followup' });
+      const msgId = Date.now().toString();
+      setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
+
+      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_followup' }, (chunk) => {
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
+      });
+
       setIsTyping(false);
       processCrisisResult(result.crisisLevel);
       
@@ -741,7 +800,7 @@ export default function ChatRoomView({ onBack }) {
         setAiTriggeredEndSession(true);
       }
       
-      setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: botText }] } : m));
       if (result.isError) {
         setInput(textToSend);
       } else {
