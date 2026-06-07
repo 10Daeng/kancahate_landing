@@ -44,9 +44,9 @@ const MODEL_CONFIGS = [
 ];
 
 /**
- * Panggil Gemini API dari server dengan retry + model fallback
+ * Fallback: Panggil Gemini API dari server jika Groq gagal
  */
-async function callGemini(history, systemPrompt, maxRetries = 3) {
+async function callGeminiFallback(history, systemPrompt, maxRetries = 2) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -147,9 +147,9 @@ async function callGemini(history, systemPrompt, maxRetries = 3) {
 }
 
 /**
- * Fallback: Panggil Groq API (LLaMA) jika Gemini gagal
+ * Utama: Panggil Groq API (LLaMA)
  */
-async function callGroqFallback(history, systemPrompt) {
+async function callGroq(history, systemPrompt) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     console.error('[Chat API] GROQ_API_KEY not set');
@@ -166,7 +166,7 @@ async function callGroqFallback(history, systemPrompt) {
   ];
 
   try {
-    console.log('[Chat API] Gemini failed. Falling back to Groq LLaMA...');
+    console.log('[Chat API] Calling Groq LLaMA...');
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -283,12 +283,12 @@ PENTING: Feedback harus dalam bahasa Indonesia santai dan tidak menghakimi.
 `;
 
       const validationHistory = [{ role: 'user', parts: [{ text: validationPrompt }] }];
-      let result = await callGemini(validationHistory, 'Kamu adalah validator jawaban.', 2);
+      let result = await callGroq(validationHistory, 'Kamu adalah validator jawaban.');
       
       if (result.error) {
-        const groqResult = await callGroqFallback(validationHistory, 'Kamu adalah validator jawaban.');
-        if (!groqResult.error && groqResult.text) {
-          result = groqResult;
+        const geminiResult = await callGeminiFallback(validationHistory, 'Kamu adalah validator jawaban.', 1);
+        if (!geminiResult.error && geminiResult.text) {
+          result = geminiResult;
         }
       }
 
@@ -317,13 +317,13 @@ PENTING: Feedback harus dalam bahasa Indonesia santai dan tidak menghakimi.
       mode: mode || 'venting',
     });
 
-    // --- Panggil Gemini API ---
-    let result = await callGemini(history, systemPrompt);
+    // --- Panggil Groq API (Utama) ---
+    let result = await callGroq(history, systemPrompt);
 
     if (result.error) {
-      const groqResult = await callGroqFallback(history, systemPrompt);
-      if (!groqResult.error && groqResult.text) {
-        result = groqResult;
+      const geminiResult = await callGeminiFallback(history, systemPrompt);
+      if (!geminiResult.error && geminiResult.text) {
+        result = geminiResult;
       } else {
         // Error-specific user-friendly messages
         const userName = userData?.name || 'kawan';
