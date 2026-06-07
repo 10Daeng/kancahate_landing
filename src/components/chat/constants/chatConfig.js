@@ -7,13 +7,12 @@
 export const INTAKE_FLOW = [
   {
     id: 'location',
-    text: "Udah nemu tempat yang tenang dan aman buat ngobrol sama Kai?",
-    type: 'option',
-    options: ["Sudah", "Belum"]
+    text: "Supaya ngobrolnya enak, boleh kasih tahu kamu lagi ngetik dari mana? (Di kamar, kafe, ruang tamu atau tempat lain?)",
+    type: 'text'
   },
   {
     id: 'name',
-    text: "Oke! Terus, biar lebih akrab, aku bisa panggil kamu siapa nih?",
+    text: "Wah, nyaman tuh kayaknya. Terus, biar lebih akrab, aku bisa panggil kamu siapa nih?",
     type: 'text'
   },
   {

@@ -183,7 +183,7 @@ export default function ChatRoomView({ onBack }) {
       {
         id: 'initial_greet_1',
         role: 'model',
-        parts: [{ text: "Halo! Udah dapet posisi duduk yang nyaman buat chatting hari ini? Kenalin aku Kai 👋" }],
+        parts: [{ text: "Halo! Udah dapet posisi yang nyaman buat chatting kali ini? Kenalin aku Kai 👋" }],
         timestamp: new Date().toISOString()
       },
       {
@@ -768,8 +768,8 @@ export default function ChatRoomView({ onBack }) {
     setPhase('finished');
 
     const closingMsg = !loggedInUser 
-      ? `Oke sampai jumpa lagi. Terima kasih sudah berbagi cerita dengan Kai 💙\n\nOh iya, kalau kamu mau percakapan kita tersimpan dan bisa dibaca lagi kapan saja, kamu bisa daftar atau login pakai Google-mu lho.`
-      : `Oke sampai jumpa lagi. Terima kasih sudah berbagi cerita dengan Kai 💙`;
+      ? `Terima kasih sudah mau berbagi cerita dengan Kai 💙\n\nOh iya, kalau kamu mau percakapan kita tersimpan dan bisa dibaca lagi kapan saja, kamu bisa daftar atau login pakai Google-mu lho.`
+      : `Terima kasih sudah mau berbagi cerita dengan Kai 💙`;
 
     setMessages(prev => [...prev, {
       id: Date.now().toString(),
@@ -786,7 +786,7 @@ export default function ChatRoomView({ onBack }) {
 
   const handleDaftarSimpan = () => {
     localStorage.setItem('kancahate_pending_save_session', sessionId);
-    router.push('/login?callbackUrl=/chat');
+    window.open('/login?callbackUrl=/chat', '_blank');
   };
 
   const handleNewSession = async (skipConfirm = false) => {
