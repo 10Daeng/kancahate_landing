@@ -237,6 +237,7 @@ export default function ChatRoomView({ onBack }) {
 
   // --- Educational content index ---
   const [eduIndex, setEduIndex] = useState(0);
+  const [hasDeclinedLogin, setHasDeclinedLogin] = useState(false);
 
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -781,8 +782,8 @@ export default function ChatRoomView({ onBack }) {
   };
 
   const handleSelesaiTanpaLogin = async () => {
-    await handleEndSession();
     clearLocalStorageOnly();
+    setHasDeclinedLogin(true);
   };
 
   const handleDaftarSimpan = () => {
@@ -864,7 +865,7 @@ export default function ChatRoomView({ onBack }) {
       return (
         <div className="flex flex-col gap-3">
           <div className="pt-2">
-            {!loggedInUser ? (
+            {(!loggedInUser && !hasDeclinedLogin) ? (
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={handleDaftarSimpan}
