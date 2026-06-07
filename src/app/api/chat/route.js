@@ -91,7 +91,7 @@ async function callGemini(history, systemPrompt, maxRetries = 3) {
         if (response.status === 429) {
           console.warn(`[Chat API] Rate limited on ${config.model}`);
           if (attempt < maxRetries) {
-            await new Promise(r => setTimeout(r, Math.pow(2, attempt + 1) * 1000));
+            await new Promise(r => setTimeout(r, 500)); // Fast retry for Vercel timeout safety
             continue;
           }
           lastError = 'Rate limited';
@@ -136,7 +136,7 @@ async function callGemini(history, systemPrompt, maxRetries = 3) {
         console.error(`[Chat API] Attempt ${attempt} failed:`, err.message);
         lastError = err.message;
         if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+          await new Promise(r => setTimeout(r, 500)); // Fast retry for Vercel timeout safety
         }
       }
     }

@@ -646,13 +646,21 @@ export default function ChatRoomView({ onBack }) {
         
         // Pindahkan Fakta Menarik sebagai Loading State
         const eduContent = showEducationalCard();
-        setMessages(prev => [...prev, {
-          role: 'model',
-          parts: [{ text: `*Sambil Kai memikirkan saran terbaik untukmu...*\n\n💡 ${eduContent.text}` }],
-          timestamp: new Date().toISOString(),
-          isEducational: true,
-          eduType: eduContent.type
-        }]);
+        setMessages(prev => [
+          ...prev, 
+          {
+            role: 'model',
+            parts: [{ text: `*Sambil Kai memikirkan saran terbaik untukmu...* ⏳` }],
+            timestamp: new Date().toISOString(),
+          },
+          {
+            role: 'model',
+            parts: [{ text: eduContent.text }],
+            timestamp: new Date(Date.now() + 100).toISOString(),
+            isEducational: true,
+            eduType: eduContent.type
+          }
+        ]);
 
         const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice' });
         
