@@ -1111,22 +1111,7 @@ export default function ChatRoomView({ onBack }) {
         </div>
       ) : (
         <div className="relative flex-1 flex flex-col min-h-0 border-x border-slate-100">
-          {/* Floating End Session Button */}
-          {phase === 'cbt_chat' && (messages.length > 12 || aiTriggeredEndSession) && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="absolute top-4 right-4 z-20"
-            >
-              <button
-                onClick={handleEndSession}
-                className="bg-white/90 backdrop-blur-md border border-violet-200 text-violet-700 shadow-[0_8px_30px_rgb(139,92,246,0.15)] hover:bg-violet-50 hover:shadow-[0_8px_30px_rgb(139,92,246,0.25)] hover:scale-105 px-4 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-2"
-              >
-                <Heart size={14} className="text-violet-500 animate-pulse" />
-                Selesai Bercerita / Legakan Sesi
-              </button>
-            </motion.div>
-          )}
+
           <div
             ref={scrollRef}
             className={`flex-1 overflow-y-auto px-4 py-5 flex flex-col gap-3 transition-colors ${
@@ -1147,6 +1132,23 @@ export default function ChatRoomView({ onBack }) {
                 <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
               </div>
             </div>
+          )}
+          
+          {/* Tombol Selesai di Akhir Chat */}
+          {phase === 'cbt_chat' && (messages.length > 12 || aiTriggeredEndSession) && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex justify-center mt-6 mb-4"
+            >
+              <button
+                onClick={handleEndSession}
+                className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-lg shadow-violet-200 hover:shadow-violet-300 hover:scale-105 px-6 py-3.5 rounded-full text-sm font-bold transition-all flex items-center gap-2"
+              >
+                <Heart size={16} className="text-white animate-pulse" />
+                Selesai Bercerita / Legakan Sesi
+              </button>
+            </motion.div>
           )}
         </div>
         </div>
