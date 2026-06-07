@@ -628,8 +628,9 @@ export default function ChatRoomView({ onBack }) {
         // Rekam session di DB sekarang untuk kepentingan analitik (sebelum chat panjang)
         createSession({
           session_id: sessionId,
-          user_id: loggedInUser?.id || null, // Nanti diupdate kalau user login
-          category_id: null, // belum dipilih
+          userId: loggedInUser?.id || null, // Nanti diupdate kalau user login
+          anonUserId: !loggedInUser?.id ? sessionId : null,
+          category: category?.id || 'general', // belum dipilih, default ke general
           status: 'Started',
           message_count: messages.length,
           user_message_count: messages.filter(m => m.role === 'user').length,
