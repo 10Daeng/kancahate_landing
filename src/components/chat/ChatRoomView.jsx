@@ -228,7 +228,6 @@ export default function ChatRoomView({ onBack }) {
 
   // --- Educational content index ---
   const [eduIndex, setEduIndex] = useState(0);
-  const [aiTriggeredEndSession, setAiTriggeredEndSession] = useState(false);
 
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -700,10 +699,6 @@ export default function ChatRoomView({ onBack }) {
       processCrisisResult(result.crisisLevel);
       
       let botText = result.text;
-      if (!result.isError && botText && botText.includes('Selesai Bercerita')) {
-        botText = botText.replace(/Selesai Bercerita/gi, '').trim();
-        setAiTriggeredEndSession(true);
-      }
       
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: botText }] } : m));
       if (result.isError) {
@@ -744,16 +739,6 @@ export default function ChatRoomView({ onBack }) {
 
     setIsTyping(false);
     setPhase('finished');
-
-    const closingMsg = loggedInUser
-      ? `Gimana rasanya setelah ngetik dan ngeluarin unek-unek tadi, ${userData.name || 'Teman'}? 💙\n\nKita sudahi dulu sesi chat hari ini ya. Ceritamu sudah tersimpan aman. Nanti kalau ada yang kepikiran lagi, feel free buat tinggalkan pesan di sini.`
-      : `Gimana rasanya setelah ngetik dan ngeluarin unek-unek tadi, ${userData.name || 'Teman'}? 💙\n\nKita sudahi dulu sesi chat hari ini ya. Ceritamu tersimpan aman. Mau buat akun supaya bisa lihat riwayat chat kapan saja?`;
-
-    setMessages(prev => [...prev, {
-      role: 'model',
-      parts: [{ text: closingMsg }],
-      timestamp: new Date().toISOString()
-    }]);
 
     // Generate AI Quote via server
     try {
@@ -863,14 +848,36 @@ export default function ChatRoomView({ onBack }) {
             </div>
           )}
           <div className="border-t border-slate-100 pt-3">
-            <p className="text-center text-xs text-slate-400 mb-2">Pakai perangkat bersama? Hapus sesi ini dan mulai baru.</p>
-            <button
-              onClick={handleNewSession}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border border-slate-200 text-slate-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all"
-            >
-              <Home size={15} />
-              Mulai Percakapan Baru
-            </button>
+            {!loggedInUser ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-center text-sm font-medium text-slate-700">Oh iya, kalau kamu mau percakapan kita tersimpan dan bisa dibaca lagi kapan saja, kamu bisa daftar atau login pakai Google-mu lho.</p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={handleDaftarSimpan}
+                    className="flex-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-4 py-3 rounded-xl text-sm font-bold shadow-md hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                  >
+                    Daftar / Login
+                  </button>
+                  <button
+                    onClick={handleSelesaiTanpaLogin}
+                    className="flex-1 bg-white border border-slate-200 text-slate-500 px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all flex items-center justify-center"
+                  >
+                    Tidak, terima kasih
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-center text-xs text-slate-400 mb-3">Pakai perangkat bersama? Hapus sesi ini dan mulai baru.</p>
+                <button
+                  onClick={handleNewSession}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold border border-slate-200 text-slate-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all"
+                >
+                  <Home size={16} />
+                  Mulai Percakapan Baru
+                </button>
+              </>
+            )}
           </div>
         </div>
       );
@@ -924,7 +931,7 @@ export default function ChatRoomView({ onBack }) {
     }
 
     // Input biasa
-    const showEndButton = (phase === 'cbt_chat' && messages.length >= 8) || aiTriggeredEndSession;
+    const showEndButton = phase === 'cbt_chat' && messages.length >= 10;
     return (
       <div className="flex flex-col gap-2 w-full">
         {/* Quick starters saat initial hook */}
@@ -1003,10 +1010,10 @@ export default function ChatRoomView({ onBack }) {
         {showEndButton && (
           <button
             onClick={handleEndSession}
-            className="w-full py-2 text-sm text-slate-400 hover:text-orange-500 font-medium flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-2.5 mt-3 bg-red-50 text-red-600 hover:bg-red-100 font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm border border-red-100"
           >
-            <Flag size={14} />
-            Sudah selesai bercerita? Klik di sini untuk mengakhiri sesi
+            <Flag size={16} />
+            Akhiri Sesi
           </button>
         )}
       </div>
@@ -1168,30 +1175,7 @@ export default function ChatRoomView({ onBack }) {
             </div>
           )}
           
-          {/* Tombol Selesai di Akhir Chat */}
-          {phase === 'cbt_chat' && (messages.length > 12 || aiTriggeredEndSession) && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col sm:flex-row justify-center gap-3 mt-6 mb-4 px-4"
-            >
-              {!loggedInUser && (
-                <button
-                  onClick={handleDaftarSimpan}
-                  className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-lg shadow-violet-200 hover:shadow-violet-300 hover:scale-105 px-6 py-3.5 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2"
-                >
-                  <Heart size={16} className="text-white animate-pulse" />
-                  Daftar / Login untuk Simpan
-                </button>
-              )}
-              <button
-                onClick={handleSelesaiTanpaLogin}
-                className="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700 hover:scale-105 px-6 py-3.5 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2"
-              >
-                Selesai & Keluar
-              </button>
-            </motion.div>
-          )}
+
         </div>
         </div>
       )}
