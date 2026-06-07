@@ -179,11 +179,20 @@ export default function ChatRoomView({ onBack }) {
         timestamp: new Date().toISOString()
       }];
     }
-    return [{
-      role: 'model',
-      parts: [{ text: "Halo! Udah dapet posisi duduk yang nyaman buat chatting hari ini? Kenalin aku Kai 👋\n\nDi ruang chat ini aman ya, percakapan kita rahasia. Kamu juga nggak perlu buru-buru balas, ambil waktu aja kalau butuh mikir sebelum ngetik." }],
-      timestamp: new Date().toISOString()
-    }];
+    return [
+      {
+        id: 'initial_greet_1',
+        role: 'model',
+        parts: [{ text: "Halo! Udah dapet posisi duduk yang nyaman buat chatting hari ini? Kenalin aku Kai 👋" }],
+        timestamp: new Date().toISOString()
+      },
+      {
+        id: 'initial_greet_2',
+        role: 'model',
+        parts: [{ text: "Di ruang chat ini aman ya, percakapan kita rahasia. Kamu juga nggak perlu buru-buru balas, ambil waktu aja kalau butuh mikir sebelum ngetik." }],
+        timestamp: new Date().toISOString()
+      }
+    ];
   });
 
   const [phase, setPhase] = useState(() => {
@@ -403,7 +412,7 @@ export default function ChatRoomView({ onBack }) {
             }
             localStorage.removeItem('kancahate_pending_save_session');
           }).catch(console.error);
-        } else if (messages.length <= 1) {
+        } else if (messages.length <= 2) {
           // Hanya mulai sesi baru jika tidak sedang merestore draft
           setPhase('subtopic');
           setIntakeIndex(INTAKE_FLOW.length);
