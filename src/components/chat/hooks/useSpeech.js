@@ -17,8 +17,8 @@ export function useSpeech() {
     if (SpeechRecognition) {
       setSpeechSupported(true);
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       recognition.lang = 'id-ID';
       recognitionRef.current = recognition;
     }
@@ -33,15 +33,32 @@ export function useSpeech() {
 
   const startListening = (onTranscript) => {
     if (!recognitionRef.current) return;
+    
+    let finalTranscript = '';
+
     recognitionRef.current.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      onTranscript(transcript);
-      setIsListening(false);
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' ';
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      onTranscript((finalTranscript + interimTranscript).trim());
     };
-    recognitionRef.current.onerror = () => setIsListening(false);
+    
+    recognitionRef.current.onerror = (e) => {
+      if (e.error !== 'no-speech') setIsListening(false);
+    };
     recognitionRef.current.onend = () => setIsListening(false);
-    recognitionRef.current.start();
-    setIsListening(true);
+    
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const stopListening = () => {

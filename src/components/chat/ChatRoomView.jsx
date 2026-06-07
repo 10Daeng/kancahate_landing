@@ -232,6 +232,7 @@ export default function ChatRoomView({ onBack }) {
 
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
+  const baseInputRef = useRef('');
   const sessionStartTimeRef = useRef(new Date());
   const messagesRef = useRef(messages);
   
@@ -1081,30 +1082,59 @@ export default function ChatRoomView({ onBack }) {
         <div className="flex gap-2 w-full">
           {speechSupported && (
             <button
-              onClick={() => isListening ? stopListening() : startListening(t => setInput(prev => prev + t))}
+              onClick={() => {
+                if (isListening) {
+                  stopListening();
+                } else {
+                  baseInputRef.current = input;
+                  startListening(t => {
+                    const sep = baseInputRef.current.trim() && t.trim() ? ' ' : '';
+                    setInput(baseInputRef.current + sep + t);
+                    // auto-resize when STT updates
+                    if (inputRef.current) {
+                      inputRef.current.style.height = 'auto';
+                      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+                    }
+                  });
+                }
+              }}
               disabled={isTyping || phase === 'finished'}
-              className={`p-3 rounded-2xl transition-colors ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-500 hover:bg-violet-100 hover:text-violet-600'} disabled:opacity-50`}
+              className={`p-3 rounded-2xl transition-colors self-end ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-500 hover:bg-violet-100 hover:text-violet-600'} disabled:opacity-50`}
               title={isListening ? "Berhenti" : "Bicara"}
             >
               {isListening ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
           )}
 
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
+            rows={1}
             placeholder={isListening ? "🎤 Sedang mendengarkan..." : "Ketik ceritamu di sini..."}
-            className={`flex-1 bg-slate-100 rounded-2xl px-4 py-3 outline-none border-2 border-transparent focus:border-orange-200 text-sm transition-all ${isListening ? 'border-red-300 bg-red-50' : ''}`}
+            className={`flex-1 bg-slate-100 rounded-2xl px-4 py-3 outline-none border-2 border-transparent focus:border-orange-200 text-sm transition-all resize-none overflow-y-auto ${isListening ? 'border-red-300 bg-red-50' : ''}`}
+            style={{ minHeight: '48px', maxHeight: '120px' }}
             value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+            onChange={e => {
+              setInput(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+                e.target.style.height = 'auto';
+              }
+            }}
             disabled={isTyping || phase === 'finished'}
           />
 
           <button
-            onClick={() => handleSendMessage()}
+            onClick={() => {
+              handleSendMessage();
+              if (inputRef.current) inputRef.current.style.height = 'auto';
+            }}
             disabled={isTyping || !input.trim() || phase === 'finished'}
-            className="bg-orange-500 text-white p-3 rounded-2xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-600 transition-colors"
+            className="bg-orange-500 text-white p-3 rounded-2xl shadow-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-orange-600 transition-colors self-end"
           >
             <Send size={20} />
           </button>
