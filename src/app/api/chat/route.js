@@ -246,7 +246,8 @@ export async function POST(request) {
     const allowedOrigins = [
       process.env.NEXT_PUBLIC_APP_URL, 
       'http://localhost:3000', 
-      'https://kancahate.my.id'
+      'https://kancahate.my.id',
+      'https://www.kancahate.my.id'
     ];
     if (origin && !allowedOrigins.some(allowed => allowed && (origin.includes(allowed) || allowed.includes(origin)))) {
       console.warn(`[Chat API] Unauthorized origin: ${origin}`);
