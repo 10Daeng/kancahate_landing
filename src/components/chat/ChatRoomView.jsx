@@ -674,24 +674,16 @@ export default function ChatRoomView({ onBack }) {
       const validationMsg = SUBTOPIC_VALIDATION_MESSAGES[subtopic];
       
       setTimeout(() => {
-        if (validationMsg) {
-          setMessages(prev => [...prev, {
-            role: 'model',
-            parts: [{ text: validationMsg }],
-            timestamp: new Date().toISOString()
-          }]);
-        }
+        setIsTyping(false);
+        const choiceMsg = `Kai sudah siap mendengarkan nih. Boleh ceritain pelan-pelan apa yang mengganggu pikiranmu soal ${subtopic}?`;
+        const combinedMsg = validationMsg ? `${validationMsg}\n\n${choiceMsg}` : choiceMsg;
         
-        setTimeout(() => {
-          setIsTyping(false);
-          const choiceMsg = `Kai sudah siap mendengarkan nih. Boleh ceritain pelan-pelan apa yang mengganggu pikiranmu soal ${subtopic}?`;
-          setMessages(prev => [...prev, {
-            role: 'model',
-            parts: [{ text: choiceMsg }],
-            timestamp: new Date().toISOString()
-          }]);
-        }, validationMsg ? 2000 : 0);
-      }, 500);
+        setMessages(prev => [...prev, {
+          role: 'model',
+          parts: [{ text: combinedMsg }],
+          timestamp: new Date().toISOString()
+        }]);
+      }, 1000);
 
       return;
     }
