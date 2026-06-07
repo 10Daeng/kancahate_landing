@@ -29,7 +29,6 @@ import HeroChatMockup from './HeroChatMockup';
 // These components are loaded lazily to break synchronous initialization chains
 // and also improve initial page load performance via code-splitting.
 const ChatRoomView = dynamic(() => import('./chat/ChatRoomView'), { ssr: false });
-const ChatModal = dynamic(() => import('./chat/ChatModal'), { ssr: false });
 const BigFiveView = dynamic(() => import('./assessments/BigFiveView'), { ssr: false });
 const MBTIView = dynamic(() => import('./assessments/MBTIView'), { ssr: false });
 const PSS10View = dynamic(() => import('./assessments/PSS10View'), { ssr: false });
@@ -311,8 +310,6 @@ export default function App() {
   
   const [currentView, setCurrentView] = useState('landing');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [initialChatData, setInitialChatData] = useState(null);
   
   useEffect(() => {
     if (testParam) {
@@ -321,45 +318,29 @@ export default function App() {
     }
   }, [testParam]);
 
-  // Periksa apakah ada resume session dari dashboard
-  useEffect(() => {
-    try {
-      const resumeData = localStorage.getItem('kancahate_resume_session');
-      if (resumeData) {
-        const session = JSON.parse(resumeData);
-        setInitialChatData({
-          resumeDbSessionId: session.id,
-          history: session.chat_history,
-          category: {
-            id: session.category,
-            title: session.category,
-            icon: '💬',
-            color: 'violet'
-          }
-        });
-        setShowChatModal(true);
-        localStorage.removeItem('kancahate_resume_session');
-      }
-    } catch (err) {
-      console.error('Error parsing resume session:', err);
-    }
-  }, []);
+  const startChat = () => {
+    window.location.href = '/chat';
+  };
 
-  const startChat = () => setShowChatModal(true);
+  const handleTestToChat = (testId, testTitle, result) => {
+    localStorage.setItem('kancahate_test_result', JSON.stringify({
+      id: testId,
+      title: testTitle,
+      result: result
+    }));
+    window.location.href = '/chat';
+  };
 
   // Assessment views
-  if (currentView === 'chat' && selectedCategory) {
-    return <ChatRoomView category={selectedCategory} onBack={() => setCurrentView('landing')} setView={setCurrentView} />;
-  }
-  if (currentView === 'test_phq9') return <FullScreenTest><PHQ9View onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes PHQ-9', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_gad7') return <FullScreenTest><GAD7View onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes GAD-7', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_riasec') return <FullScreenTest><RIASECView onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes RIASEC', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_mbti') return <FullScreenTest><MBTIView onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes MBTI', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_bigfive') return <FullScreenTest><BigFiveView onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes Big Five', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_rosenberg') return <FullScreenTest><RosenbergView onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes Harga Diri', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_vark') return <FullScreenTest><VARKView onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes Gaya Belajar (VARK)', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_multiple_intelligence') return <FullScreenTest><MultipleIntelligenceView onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes Multiple Intelligence', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
-  if (currentView === 'test_love_languages') return <FullScreenTest><LoveLanguagesView onBack={() => setCurrentView('landing')} onChat={(result) => { setSelectedCategory({ id: 'test_result', title: 'Hasil Tes Bahasa Cinta', testResult: result }); setCurrentView('chat'); }} /></FullScreenTest>;
+  if (currentView === 'test_phq9') return <FullScreenTest><PHQ9View onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes PHQ-9', result)} /></FullScreenTest>;
+  if (currentView === 'test_gad7') return <FullScreenTest><GAD7View onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes GAD-7', result)} /></FullScreenTest>;
+  if (currentView === 'test_riasec') return <FullScreenTest><RIASECView onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes RIASEC', result)} /></FullScreenTest>;
+  if (currentView === 'test_mbti') return <FullScreenTest><MBTIView onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes MBTI', result)} /></FullScreenTest>;
+  if (currentView === 'test_bigfive') return <FullScreenTest><BigFiveView onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes Big Five', result)} /></FullScreenTest>;
+  if (currentView === 'test_rosenberg') return <FullScreenTest><RosenbergView onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes Harga Diri', result)} /></FullScreenTest>;
+  if (currentView === 'test_vark') return <FullScreenTest><VARKView onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes Gaya Belajar (VARK)', result)} /></FullScreenTest>;
+  if (currentView === 'test_multiple_intelligence') return <FullScreenTest><MultipleIntelligenceView onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes Multiple Intelligence', result)} /></FullScreenTest>;
+  if (currentView === 'test_love_languages') return <FullScreenTest><LoveLanguagesView onBack={() => setCurrentView('landing')} onChat={(result) => handleTestToChat('test_result', 'Hasil Tes Bahasa Cinta', result)} /></FullScreenTest>;
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-700 overflow-x-hidden">
@@ -409,14 +390,6 @@ export default function App() {
         <Shield size={16} />
         <span className="hidden sm:inline">Lapor!</span>
       </motion.a>
-
-      {/* ========== CHAT MODAL ========== */}
-      <ChatModal
-        isOpen={showChatModal}
-        onClose={() => setShowChatModal(false)}
-        category={selectedCategory || { id: 'general', title: 'Curhat', icon: '💬', color: 'violet' }}
-        initialData={initialChatData}
-      />
     </div>
   );
 }

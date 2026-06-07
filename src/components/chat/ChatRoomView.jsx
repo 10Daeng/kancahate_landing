@@ -62,7 +62,7 @@ async function callChatAPI({ history, userData, category, currentRiskLevel, mode
 // ============================================================
 // KOMPONEN UTAMA
 // ============================================================
-export default function ChatRoomView({ category, onBack, initialData }) {
+export default function ChatRoomView({ onBack }) {
   const { data: sessionData, status } = useSession();
   const rateLimiter = useRef(createRateLimiter(15, 60000)).current;
 
@@ -94,6 +94,38 @@ export default function ChatRoomView({ category, onBack, initialData }) {
     }
   });
 
+  // --- Ambil initial data dari LocalStorage ---
+  const [initialData] = useState(() => {
+    try {
+      const resume = localStorage.getItem('kancahate_resume_session');
+      if (resume) {
+        const session = JSON.parse(resume);
+        localStorage.removeItem('kancahate_resume_session');
+        return {
+          resumeDbSessionId: session.id,
+          history: session.chat_history,
+          category: { id: session.category, title: session.category, icon: '💬', color: 'violet' }
+        };
+      }
+      
+      const testResult = localStorage.getItem('kancahate_test_result');
+      if (testResult) {
+        const tr = JSON.parse(testResult);
+        localStorage.removeItem('kancahate_test_result');
+        return {
+          isTestResult: true,
+          testResult: tr,
+          category: { id: 'test_result', title: tr.title, icon: '📋', color: 'violet' }
+        };
+      }
+    } catch (e) {
+      console.error("Error reading initial data:", e);
+    }
+    return null;
+  });
+
+  const [category] = useState(() => initialData?.category || { id: 'general', title: 'Curhat', icon: '💬', color: 'violet' });
+
   // --- Core State ---
   const [messages, setMessages] = useState(() => {
     if (initialData?.history && initialData.history.length > 0) {
@@ -103,17 +135,42 @@ export default function ChatRoomView({ category, onBack, initialData }) {
         timestamp: new Date().toISOString()
       }];
     }
+    if (initialData?.isTestResult) {
+      return [{
+        role: 'model',
+        parts: [{ text: `Halo! Kai baru aja lihat hasil tes ${initialData.testResult.title} kamu nih. Kelihatannya ada hal yang pengen kamu bahas lebih jauh tentang hasil ini. Ceritain pelan-pelan ke Kai yuk, apa yang paling mengganggu pikiranmu saat ini?` }],
+        timestamp: new Date().toISOString()
+      }];
+    }
     return [{
       role: 'model',
       parts: [{ text: "Halo! Udah dapet posisi duduk yang nyaman buat chatting hari ini? Kenalin aku Kai 👋\n\nDi ruang chat ini aman ya, percakapan kita rahasia. Kamu juga nggak perlu buru-buru balas, ambil waktu aja kalau butuh mikir sebelum ngetik." }],
       timestamp: new Date().toISOString()
     }];
   });
-  const [phase, setPhase] = useState(initialData?.history ? 'resume_choice' : 'initial_hook');
+
+  const [phase, setPhase] = useState(() => {
+    if (initialData?.history) return 'resume_choice';
+    if (initialData?.isTestResult) return 'venting';
+    return 'initial_hook';
+  });
+
+  const [chatMode, setChatMode] = useState(() => {
+    if (initialData?.isTestResult) return 'venting';
+    return null;
+  });
+
   const [intakeIndex, setIntakeIndex] = useState(0);
   const [explorationCount, setExplorationCount] = useState(0);
-  const [chatMode, setChatMode] = useState(null); // 'venting' | 'advice' | 'advice_followup'
-  const [userData, setUserData] = useState(initialData || {});
+  const [userData, setUserData] = useState(() => {
+    if (initialData?.isTestResult) {
+      return {
+        ...initialData,
+        subtopic: `Diskusi Hasil: ${initialData.testResult.title}`
+      };
+    }
+    return initialData || {};
+  });
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [isRecovering, setIsRecovering] = useState(!initialData?.history);
   const [existingDbSessionId, setExistingDbSessionId] = useState(initialData?.resumeDbSessionId || null);
