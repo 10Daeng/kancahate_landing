@@ -638,7 +638,11 @@ export default function ChatRoomView({ onBack }) {
         setIsTyping(false);
         processCrisisResult(result.crisisLevel);
         setMessages(prev => [...prev, { role: 'model', parts: [{ text: result.text }], timestamp: new Date().toISOString() }]);
-        speakText(result.text);
+        if (result.isError) {
+          setInput(textToSend);
+        } else {
+          speakText(result.text);
+        }
       } else {
         // Eksplorasi selesai, minta saran ke AI
         setPhase('advice_followup');
@@ -678,6 +682,7 @@ export default function ChatRoomView({ onBack }) {
           speakText(botText);
         } else {
           setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
+          setInput(textToSend);
         }
       }
       return;
@@ -707,13 +712,17 @@ export default function ChatRoomView({ onBack }) {
       processCrisisResult(result.crisisLevel);
       
       let botText = result.text;
-      if (botText && botText.includes('Selesai Bercerita')) {
+      if (!result.isError && botText && botText.includes('Selesai Bercerita')) {
         botText = botText.replace(/Selesai Bercerita/gi, '').trim();
         setAiTriggeredEndSession(true);
       }
       
       setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
-      speakText(botText);
+      if (result.isError) {
+        setInput(textToSend);
+      } else {
+        speakText(botText);
+      }
       return;
     }
 
@@ -727,13 +736,17 @@ export default function ChatRoomView({ onBack }) {
       processCrisisResult(result.crisisLevel);
       
       let botText = result.text;
-      if (botText && botText.includes('Selesai Bercerita')) {
+      if (!result.isError && botText && botText.includes('Selesai Bercerita')) {
         botText = botText.replace(/Selesai Bercerita/gi, '').trim();
         setAiTriggeredEndSession(true);
       }
       
       setMessages(prev => [...prev, { role: 'model', parts: [{ text: botText }], timestamp: new Date().toISOString() }]);
-      speakText(botText);
+      if (result.isError) {
+        setInput(textToSend);
+      } else {
+        speakText(botText);
+      }
       return;
     }
   };
