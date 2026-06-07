@@ -66,34 +66,6 @@ export default function ChatRoomView({ onBack }) {
   const { data: sessionData, status } = useSession();
   const rateLimiter = useRef(createRateLimiter(15, 60000)).current;
 
-  // --- Session & Anon ID ---
-  const [sessionId] = useState(() => {
-    if (initialData?.resumeDbSessionId) return `session_${Date.now()}_resume_${initialData.resumeDbSessionId}`;
-    try {
-      let id = localStorage.getItem('kancahate_session_id');
-      if (!id) {
-        id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        localStorage.setItem('kancahate_session_id', id);
-      }
-      return id;
-    } catch (e) {
-      return `session_${Date.now()}_fallback_` + Math.random().toString(36).substr(2, 9);
-    }
-  });
-
-  const [anonUserId] = useState(() => {
-    try {
-      let id = localStorage.getItem('kancahate_anon_id');
-      if (!id) {
-        id = `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        localStorage.setItem('kancahate_anon_id', id);
-      }
-      return id;
-    } catch (e) {
-      return `anon_${Date.now()}_fallback_` + Math.random().toString(36).substr(2, 9);
-    }
-  });
-
   // --- Ambil initial data dari LocalStorage ---
   const [initialData] = useState(() => {
     try {
@@ -125,6 +97,35 @@ export default function ChatRoomView({ onBack }) {
   });
 
   const [category] = useState(() => initialData?.category || { id: 'general', title: 'Curhat', icon: '💬', color: 'violet' });
+
+  // --- Session & Anon ID ---
+  const [sessionId] = useState(() => {
+    if (initialData?.resumeDbSessionId) return `session_${Date.now()}_resume_${initialData.resumeDbSessionId}`;
+    try {
+      let id = localStorage.getItem('kancahate_session_id');
+      if (!id) {
+        id = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('kancahate_session_id', id);
+      }
+      return id;
+    } catch (e) {
+      return `session_${Date.now()}_fallback_` + Math.random().toString(36).substr(2, 9);
+    }
+  });
+
+  const [anonUserId] = useState(() => {
+    try {
+      let id = localStorage.getItem('kancahate_anon_id');
+      if (!id) {
+        id = `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('kancahate_anon_id', id);
+      }
+      return id;
+    } catch (e) {
+      return `anon_${Date.now()}_fallback_` + Math.random().toString(36).substr(2, 9);
+    }
+  });
+
 
   // --- Core State ---
   const [messages, setMessages] = useState(() => {
