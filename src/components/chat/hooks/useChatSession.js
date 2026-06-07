@@ -107,5 +107,13 @@ export function useChatSession({
     window.location.reload();
   };
 
-  return { clearSession };
+  const clearLocalStorageOnly = () => {
+    localStorage.removeItem('kancahate_session_id');
+    localStorage.removeItem(`kancahate_draft_${sessionId}`);
+    localStorage.removeItem('kancahate_draft_backup');
+    // We intentionally do not reload the page here.
+    // The current UI stays, but the next page load gets a fresh session.
+  };
+
+  return { clearSession, clearLocalStorageOnly };
 }

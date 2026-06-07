@@ -327,7 +327,7 @@ export default function ChatRoomView({ onBack }) {
 
 
 
-  const { clearSession } = useChatSession({
+  const { clearSession, clearLocalStorageOnly } = useChatSession({
     sessionId,
     anonUserId,
     phase, messages, userData,
@@ -383,13 +383,37 @@ export default function ChatRoomView({ onBack }) {
         }));
         const autoPersona = selectPersonaBasedOnIdentity(profile);
         setUserData(prev => ({ ...prev, persona: autoPersona.id }));
-        setPhase('subtopic');
-        setIntakeIndex(INTAKE_FLOW.length);
-        setMessages([{
-          role: 'model',
-          parts: [{ text: `Halo lagi, ${profile.name}! 👋 Senang ketemu kamu lagi. Hari ini mau ngobrolin tentang apa?` }],
-          timestamp: new Date().toISOString()
-        }]);
+        
+        const pendingSessionId = localStorage.getItem('kancahate_pending_save_session');
+        
+        if (pendingSessionId) {
+          // Link session API call
+          fetch('/api/chat/link-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: pendingSessionId })
+          }).then(res => res.json()).then(data => {
+            if (data.success) {
+              setMessages(prev => [...prev, {
+                role: 'model',
+                parts: [{ text: 'Yeay! Obrolan kita sebelumnya sudah berhasil disimpan ke akun kamu. 🎉' }],
+                timestamp: new Date().toISOString(),
+                isEducational: true,
+                eduType: 'tip'
+              }]);
+            }
+            localStorage.removeItem('kancahate_pending_save_session');
+          }).catch(console.error);
+        } else if (messages.length <= 1) {
+          // Hanya mulai sesi baru jika tidak sedang merestore draft
+          setPhase('subtopic');
+          setIntakeIndex(INTAKE_FLOW.length);
+          setMessages([{
+            role: 'model',
+            parts: [{ text: `Halo lagi, ${profile.name}! 👋 Senang ketemu kamu lagi. Hari ini mau ngobrolin tentang apa?` }],
+            timestamp: new Date().toISOString()
+          }]);
+        }
       }
     }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -742,6 +766,16 @@ export default function ChatRoomView({ onBack }) {
     } catch (_) {
       setFinalQuote("Kamu sudah luar biasa berani hari ini. Langkah kecilmu sangat berarti!");
     }
+  };
+
+  const handleSelesaiTanpaLogin = async () => {
+    await handleEndSession();
+    clearLocalStorageOnly();
+  };
+
+  const handleDaftarSimpan = () => {
+    localStorage.setItem('kancahate_pending_save_session', sessionId);
+    router.push('/login?callbackUrl=/chat');
   };
 
   const handleNewSession = async (skipConfirm = false) => {
@@ -1139,14 +1173,22 @@ export default function ChatRoomView({ onBack }) {
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex justify-center mt-6 mb-4"
+              className="flex flex-col sm:flex-row justify-center gap-3 mt-6 mb-4 px-4"
             >
+              {!loggedInUser && (
+                <button
+                  onClick={handleDaftarSimpan}
+                  className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-lg shadow-violet-200 hover:shadow-violet-300 hover:scale-105 px-6 py-3.5 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2"
+                >
+                  <Heart size={16} className="text-white animate-pulse" />
+                  Daftar / Login untuk Simpan
+                </button>
+              )}
               <button
-                onClick={handleEndSession}
-                className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-lg shadow-violet-200 hover:shadow-violet-300 hover:scale-105 px-6 py-3.5 rounded-full text-sm font-bold transition-all flex items-center gap-2"
+                onClick={handleSelesaiTanpaLogin}
+                className="bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700 hover:scale-105 px-6 py-3.5 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2"
               >
-                <Heart size={16} className="text-white animate-pulse" />
-                Selesai Bercerita / Legakan Sesi
+                Selesai & Keluar
               </button>
             </motion.div>
           )}
