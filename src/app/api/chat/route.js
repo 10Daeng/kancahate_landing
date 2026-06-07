@@ -335,7 +335,7 @@ PENTING: Feedback harus dalam bahasa Indonesia santai dan tidak menghakimi.
       userData: userData || {},
       category: category || {},
       currentRiskLevel: currentRiskLevel || { level: 'Rendah' },
-      mode: mode || 'venting',
+      mode: mode || 'cbt_chat',
     });
 
     // --- Panggil Groq API (Utama) ---

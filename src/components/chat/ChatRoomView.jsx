@@ -188,13 +188,13 @@ export default function ChatRoomView({ onBack }) {
 
   const [phase, setPhase] = useState(() => {
     if (initialData?.history) return 'resume_choice';
-    if (initialData?.isTestResult) return 'venting';
+    if (initialData?.isTestResult) return 'cbt_chat';
     return 'initial_hook';
   });
 
   const [chatMode, setChatMode] = useState(() => {
-    if (initialData?.isTestResult) return 'venting';
-    return null;
+    if (initialData?.isTestResult) return 'cbt_chat';
+    return 'cbt_chat';
   });
 
   const [intakeIndex, setIntakeIndex] = useState(0);
@@ -309,7 +309,7 @@ export default function ChatRoomView({ onBack }) {
 
   const resetIdleTimer = useCallback(() => {
     clearIdleTimers();
-    if (phase === 'advice_exploration' || phase === 'venting' || phase === 'advice_followup') {
+    if (phase === 'cbt_chat') {
       idleTimerRef.current = setTimeout(() => {
         addBotMessage(`Hai ${userData?.name || 'kamu'}, kamu masih di sana? Kalau kamu butuh waktu buat mikir, santai aja ya. Tapi kalau obrolan ini udah cukup melegakan buatmu, aku izin pamit ya biar sesinya tersimpan dengan aman.`, 1000);
         
@@ -470,7 +470,7 @@ export default function ChatRoomView({ onBack }) {
     const textToSend = (manualText || input).toString().trim();
     if (!textToSend || isTyping) return;
 
-    if ((phase === 'advice_exploration' || phase === 'free_chat' || phase === 'venting' || phase === 'advice_followup') && !rateLimiter.canSend()) {
+    if (phase === 'cbt_chat' && !rateLimiter.canSend()) {
       setRateLimitWarning(true);
       setTimeout(() => setRateLimitWarning(false), 5000);
       return;
@@ -487,10 +487,8 @@ export default function ChatRoomView({ onBack }) {
         setInput('');
         
         // Cek riwayat untuk mengetahui mode sebelumnya
-        const isAdvice = initialData?.metadata?.chat_mode === 'advice' || initialData?.history?.some(m => m.role === 'model' && m.parts[0].text.includes('Sambil Kai memikirkan saran'));
-        const nextPhase = isAdvice ? 'advice_followup' : 'venting';
-        setChatMode(isAdvice ? 'advice' : 'venting');
-        setPhase(nextPhase);
+        setChatMode('cbt_chat');
+        setPhase('cbt_chat');
         
         addBotMessage("Sip, Kai siap dengerin kelanjutannya. Boleh dilanjut ceritanya ya.", 1000);
       } else if (textToSend === 'Mulai Baru') {
@@ -608,7 +606,7 @@ export default function ChatRoomView({ onBack }) {
     }
 
     // =============================================
-    // FASE 1.5: SUBTOPIC -> Langsung Pindah ke Choice
+    // FASE 1.5: SUBTOPIC -> Langsung Pindah ke CBT CHAT
     // =============================================
     if (phase === 'subtopic') {
       let subtopic = textToSend;
@@ -618,7 +616,7 @@ export default function ChatRoomView({ onBack }) {
         return;
       }
       setUserData(prev => ({ ...prev, subtopic }));
-      setPhase('choice');
+      setPhase('cbt_chat');
       setIsTyping(true);
       
       const validationMsg = SUBTOPIC_VALIDATION_MESSAGES[subtopic];
@@ -634,12 +632,11 @@ export default function ChatRoomView({ onBack }) {
         
         setTimeout(() => {
           setIsTyping(false);
-          const choiceMsg = `Sebelum kita obrolin ini lebih jauh, ${userData.name || 'kamu'} lagi butuh apa nih dari Kai saat ini? 🤔\n\n— Pengen didengerin aja tanpa dihakimi\n— Butuh saran atau cari jalan keluar bareng-bareng`;
+          const choiceMsg = `Kai sudah siap mendengarkan nih. Boleh ceritain pelan-pelan apa yang mengganggu pikiranmu soal ${subtopic}?`;
           setMessages(prev => [...prev, {
             role: 'model',
             parts: [{ text: choiceMsg }],
-            timestamp: new Date().toISOString(),
-            isChoice: true
+            timestamp: new Date().toISOString()
           }]);
         }, validationMsg ? 2000 : 0);
       }, 500);
@@ -649,116 +646,29 @@ export default function ChatRoomView({ onBack }) {
 
     if (phase === 'subtopic_custom') {
       setUserData(prev => ({ ...prev, subtopic: textToSend, subtopic_custom: true }));
-      setPhase('choice');
+      setPhase('cbt_chat');
       setIsTyping(true);
       setTimeout(() => {
         setIsTyping(false);
-        const choiceMsg = `Sebelum kita obrolin ini lebih jauh, ${userData.name || 'kamu'} lagi butuh apa nih dari Kai saat ini? 🤔\n\n— Pengen didengerin aja tanpa dihakimi\n— Butuh saran atau cari jalan keluar bareng-bareng`;
+        const choiceMsg = `Kai sudah siap mendengarkan nih. Boleh ceritain pelan-pelan apa yang mengganggu pikiranmu soal ${textToSend}?`;
         setMessages(prev => [...prev, {
           role: 'model',
           parts: [{ text: choiceMsg }],
-          timestamp: new Date().toISOString(),
-          isChoice: true
+          timestamp: new Date().toISOString()
         }]);
       }, 1200);
       return;
     }
 
     // =============================================
-    // FASE 2: ADVICE EXPLORATION (AI dinamis)
+    // FASE UTAMA: CBT CHAT
     // =============================================
-    if (phase === 'advice_exploration') {
-      if (explorationCount < 1) {
-        setExplorationCount(prev => prev + 1);
-        setIsTyping(true);
-        const msgId = Date.now().toString();
-        setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
-
-        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_exploration' }, (chunk) => {
-          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
-        });
-
-        setIsTyping(false);
-        processCrisisResult(result.crisisLevel);
-        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: result.text }] } : m));
-
-        if (result.isError) {
-          setInput(textToSend);
-        } else {
-          speakText(result.text);
-        }
-      } else {
-        // Eksplorasi selesai, minta saran ke AI
-        setPhase('advice_followup');
-        setIsTyping(true);
-        
-        // Pindahkan Fakta Menarik sebagai Loading State
-        const eduContent = showEducationalCard();
-        setMessages(prev => [
-          ...prev, 
-          {
-            role: 'model',
-            parts: [{ text: `*Sambil Kai memikirkan saran terbaik untukmu...* ⏳` }],
-            timestamp: new Date().toISOString(),
-          },
-          {
-            role: 'model',
-            parts: [{ text: eduContent.text }],
-            timestamp: new Date(Date.now() + 100).toISOString(),
-            isEducational: true,
-            eduType: eduContent.type
-          }
-        ]);
-
-        const msgId = Date.now().toString();
-        setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
-
-        const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice' }, (chunk) => {
-          setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
-        });
-        
-        setIsTyping(false);
-        processCrisisResult(result.crisisLevel);
-        
-        let botText = result.text;
-        if (!result.isError && botText && botText.includes('Selesai Bercerita')) {
-          botText = botText.replace(/Selesai Bercerita/gi, '').trim();
-          setAiTriggeredEndSession(true);
-        }
-        
-        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: botText }] } : m));
-        if (!result.isError) {
-          speakText(botText);
-        } else {
-          setInput(textToSend);
-        }
-      }
-      return;
-    }
-
-    // =============================================
-    // FASE 3: CHOICE (pilih mode)
-    // Ditangani oleh tombol — jika user ketik, arahkan ke pilihan
-    // =============================================
-    if (phase === 'choice') {
-      const lower = textToSend.toLowerCase();
-      if (lower.includes('saran') || lower.includes('solusi') || lower.includes('bantu')) {
-        handleModeChoice('advice');
-      } else {
-        handleModeChoice('venting');
-      }
-      return;
-    }
-
-    // =============================================
-    // FASE 4a: VENTING MODE (curhat bebas — AI pendek, tanpa saran)
-    // =============================================
-    if (phase === 'venting') {
+    if (phase === 'cbt_chat') {
       setIsTyping(true);
       const msgId = Date.now().toString();
       setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
 
-      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'venting' }, (chunk) => {
+      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'cbt_chat' }, (chunk) => {
         setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
       });
 
@@ -778,64 +688,6 @@ export default function ChatRoomView({ onBack }) {
         speakText(botText);
       }
       return;
-    }
-
-    // =============================================
-    // FASE 4b: ADVICE FOLLOWUP (iterasi setelah saran pertama)
-    // =============================================
-    if (phase === 'advice_followup') {
-      setIsTyping(true);
-      const msgId = Date.now().toString();
-      setMessages(prev => [...prev, { id: msgId, role: 'model', parts: [{ text: '' }], timestamp: new Date().toISOString() }]);
-
-      const result = await callChatAPI({ history: newMessages, userData, category, currentRiskLevel, mode: 'advice_followup' }, (chunk) => {
-        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: chunk }] } : m));
-      });
-
-      setIsTyping(false);
-      processCrisisResult(result.crisisLevel);
-      
-      let botText = result.text;
-      if (!result.isError && botText && botText.includes('Selesai Bercerita')) {
-        botText = botText.replace(/Selesai Bercerita/gi, '').trim();
-        setAiTriggeredEndSession(true);
-      }
-      
-      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, parts: [{ text: botText }] } : m));
-      if (result.isError) {
-        setInput(textToSend);
-      } else {
-        speakText(botText);
-      }
-      return;
-    }
-  };
-
-  // --- Pilih Mode Chat ---
-  const handleModeChoice = async (mode) => {
-    const userLabel = mode === 'venting' ? 'Aku mau cerita aja dulu 😊' : 'Aku mau minta saran dari Kai 💡';
-    const userMsg = { role: 'user', parts: [{ text: userLabel }], timestamp: new Date().toISOString() };
-    setMessages(prev => [...prev, userMsg]);
-    setChatMode(mode);
-
-    if (mode === 'venting') {
-      setPhase('venting');
-      addBotMessage(`Oke, Kai dengerin sepenuhnya. Cerita aja semua yang kerasa berat, pelan-pelan ya. Kai di sini buat kamu. 💙`, 1000);
-    } else {
-      // mode === 'advice'
-      setPhase('advice_exploration');
-      setExplorationCount(0);
-      
-      setIsTyping(true);
-      setTimeout(() => {
-        setMessages(prev => [...prev, {
-          role: 'model',
-          parts: [{ text: `Wah, terima kasih banyak sudah mau berbagi cerita awal ini dengan Kai. Ceritamu penting banget.\n\nSupaya saran Kai bisa lebih pas buat kamu, boleh ceritain sedikit bagian mana yang paling bikin kamu berat/bingung saat ini?` }],
-          timestamp: new Date().toISOString()
-        }]);
-        speakText(`Wah, terima kasih banyak sudah mau berbagi cerita awal ini dengan Kai. Ceritamu penting banget. Supaya saran Kai bisa lebih pas buat kamu, boleh ceritain sedikit bagian mana yang paling bikin kamu berat atau bingung saat ini?`);
-        setIsTyping(false);
-      }, 1000);
     }
   };
 
@@ -1026,33 +878,7 @@ export default function ChatRoomView({ onBack }) {
       );
     }
 
-    // CHOICE: tampilkan 2 tombol pilihan mode
-    if (phase === 'choice') {
-      return (
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={() => handleModeChoice('venting')}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 font-semibold text-sm hover:bg-violet-100 transition-all text-left"
-          >
-            <span className="text-xl">💬</span>
-            <div>
-              <div className="font-bold">Dengerin aja dulu</div>
-              <div className="text-xs text-violet-500 font-normal">Aku hanya ingin bercerita tanpa mencari saran</div>
-            </div>
-          </button>
-          <button
-            onClick={() => handleModeChoice('advice')}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 font-semibold text-sm hover:bg-amber-100 transition-all text-left"
-          >
-            <span className="text-xl">💡</span>
-            <div>
-              <div className="font-bold">Minta saran dari Kai</div>
-              <div className="text-xs text-amber-500 font-normal">Aku ingin tahu apa yang bisa aku lakukan</div>
-            </div>
-          </button>
-        </div>
-      );
-    }
+
 
     // Grounding widget
     if (showGrounding) {
@@ -1063,8 +889,8 @@ export default function ChatRoomView({ onBack }) {
       );
     }
 
-    // Input biasa (venting, advice_followup)
-    const showEndButton = (['venting', 'advice_followup'].includes(phase) && messages.length >= 8) || aiTriggeredEndSession;
+    // Input biasa
+    const showEndButton = (phase === 'cbt_chat' && messages.length >= 8) || aiTriggeredEndSession;
     return (
       <div className="flex flex-col gap-2 w-full">
         {/* Quick starters saat initial hook */}
@@ -1215,8 +1041,7 @@ export default function ChatRoomView({ onBack }) {
   // ============================================================
   const phaseLabel = {
     initial_hook: 'Memulai', intake: 'Pendataan', subtopic: 'Pilih Topik',
-    choice: 'Pilih Mode', venting: 'Curhat Bebas',
-    advice_followup: 'Saran & Diskusi', finishing: 'Menyimpan', finished: 'Selesai'
+    cbt_chat: 'Curhat & Diskusi', finishing: 'Menyimpan', finished: 'Selesai'
   }[phase] || phase;
 
   return (
@@ -1286,8 +1111,8 @@ export default function ChatRoomView({ onBack }) {
         </div>
       ) : (
         <div className="relative flex-1 flex flex-col min-h-0 border-x border-slate-100">
-          {/* Floating End Session Button for Venting */}
-          {phase === 'venting' && (messages.length > 12 || aiTriggeredEndSession) && (
+          {/* Floating End Session Button */}
+          {phase === 'cbt_chat' && (messages.length > 12 || aiTriggeredEndSession) && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
