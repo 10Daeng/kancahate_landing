@@ -9,7 +9,7 @@ import { checkIsAdmin } from '@/app/admin/actions';
 import {
   ChevronLeft, RefreshCw, Loader2, Users, UserCheck, UserX,
   FileText, Eye, TrendingUp, Calendar, Brain, Heart,
-  Award, Target, Activity, Download, BarChart3
+  Award, Target, Activity, Download, BarChart3, MessageCircle
 } from 'lucide-react';
 
 // Stat Card Component
@@ -113,12 +113,19 @@ export default function AdminDashboardPage() {
     dailyViews: [],
     dailyTests: [],
     dailyUsers: [],
+    dailySessions: [],
 
     // Top Articles
     topArticles: [],
 
     // Top Tests
     topTests: [],
+
+    // Counseling Stats
+    totalSessions: 0,
+    sessionsThisMonth: 0,
+    sessionsToday: 0,
+    topSubtopics: [],
   });
 
   // Time period filter
@@ -232,12 +239,12 @@ export default function AdminDashboardPage() {
             color="blue"
           />
           <StatCard
-            icon={FileText}
-            label="Artikel Tayang"
-            value={stats.publishedArticles}
-            change={`${stats.totalArticles} total`}
-            changeType="neutral"
-            color="amber"
+            icon={MessageCircle}
+            label="Total Sesi Curhat"
+            value={stats.totalSessions}
+            change={`+${stats.sessionsThisMonth} bulan ini`}
+            changeType="up"
+            color="pink"
           />
         </div>
 
@@ -414,10 +421,33 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           </div>
+
+          {/* Daily Sessions */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Sesi Curhat (7 Hari)</h2>
+              <MessageCircle className="text-pink-500" size={20} />
+            </div>
+            <div className="flex gap-2 mb-2">
+              {stats.activityDays?.map((day, i) => (
+                <div key={i} className="flex-1 text-center">
+                  <p className="text-xs text-slate-500">{day}</p>
+                </div>
+              ))}
+            </div>
+            <MiniChart data={stats.dailySessions} max={Math.max(...(stats.dailySessions || [1]), 1)} color="#EC4899" />
+            <div className="flex gap-2 mt-2">
+              {stats.dailySessions?.map((val, i) => (
+                <div key={i} className="flex-1 text-center">
+                  <p className="text-xs font-bold text-slate-700">{val}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Top Content */}
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Top Articles */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200">
             <div className="flex items-center justify-between mb-4">
@@ -487,6 +517,41 @@ export default function AdminDashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Top Subtopics */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Topik Curhat</h2>
+              <Heart className="text-pink-500" size={20} />
+            </div>
+            {stats.topSubtopics?.length > 0 ? (
+              <div className="space-y-3">
+                {stats.topSubtopics.map((topic, index) => (
+                  <div
+                    key={topic.name}
+                    className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl"
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
+                      index === 0 ? 'bg-pink-100 text-pink-600' :
+                      index === 1 ? 'bg-slate-200 text-slate-600' :
+                      index === 2 ? 'bg-orange-100 text-orange-600' :
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{topic.name}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-slate-800">{topic.count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-slate-500 py-8">Belum ada topik</p>
+            )}
           </div>
         </div>
       </main>

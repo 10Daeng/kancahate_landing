@@ -11,6 +11,7 @@ export async function getDashboardStats() {
     const testStats = await fetchTestStats();
     const dailyActivity = await fetchDailyActivity();
     const topContent = await fetchTopContent(testStats);
+    const counselingStats = await fetchCounselingStats();
 
     return {
       success: true,
@@ -20,6 +21,7 @@ export async function getDashboardStats() {
         ...testStats,
         ...dailyActivity,
         ...topContent,
+        ...counselingStats,
       }
     };
   } catch (error) {
@@ -155,6 +157,7 @@ async function fetchDailyActivity() {
     const dailyViews = [];
     const dailyTests = [];
     const dailyUsers = [];
+    const dailySessions = [];
 
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
@@ -180,12 +183,20 @@ async function fetchDailyActivity() {
           sql`${schema.users.createdAt} >= ${dayStart.toISOString()} AND ${schema.users.createdAt} < ${dayEnd.toISOString()}`
         );
       dailyUsers.push(usersDay.length);
+
+      const sessionsDay = await db.select({ id: schema.counselingSessions.id })
+        .from(schema.counselingSessions)
+        .where(
+          sql`${schema.counselingSessions.startedAt} >= ${dayStart.toISOString()} AND ${schema.counselingSessions.startedAt} < ${dayEnd.toISOString()}`
+        );
+      dailySessions.push(sessionsDay.length);
     }
 
     return {
       dailyViews,
       dailyTests,
       dailyUsers,
+      dailySessions,
       activityDays: days,
     };
   } catch (error) {
@@ -194,6 +205,7 @@ async function fetchDailyActivity() {
       dailyViews: [0, 0, 0, 0, 0, 0, 0],
       dailyTests: [0, 0, 0, 0, 0, 0, 0],
       dailyUsers: [0, 0, 0, 0, 0, 0, 0],
+      dailySessions: [0, 0, 0, 0, 0, 0, 0],
       activityDays: [],
     };
   }
@@ -228,5 +240,54 @@ async function fetchTopContent(testStats) {
   } catch (error) {
     console.error('Error in fetchTopContent:', error);
     return { topArticles: [], topTests: [] };
+  }
+}
+
+async function fetchCounselingStats() {
+  try {
+    const sessions = await db.select({
+      id: schema.counselingSessions.id,
+      startedAt: schema.counselingSessions.startedAt,
+      subtopic: schema.counselingSessions.subtopic,
+    }).from(schema.counselingSessions);
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const subtopicCounts = {};
+
+    let sessionsToday = 0;
+    let sessionsThisMonth = 0;
+
+    sessions.forEach(s => {
+      const date = new Date(s.startedAt);
+      if (date >= todayStart) sessionsToday++;
+      if (date >= monthStart) sessionsThisMonth++;
+      
+      if (s.subtopic) {
+        subtopicCounts[s.subtopic] = (subtopicCounts[s.subtopic] || 0) + 1;
+      }
+    });
+
+    const topSubtopics = Object.entries(subtopicCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      totalSessions: sessions.length,
+      sessionsToday,
+      sessionsThisMonth,
+      topSubtopics,
+    };
+  } catch (error) {
+    console.error('Error in fetchCounselingStats:', error);
+    return {
+      totalSessions: 0,
+      sessionsToday: 0,
+      sessionsThisMonth: 0,
+      topSubtopics: [],
+    };
   }
 }
