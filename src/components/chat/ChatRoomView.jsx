@@ -217,7 +217,7 @@ export default function ChatRoomView({ onBack }) {
   const [isTyping, setIsTyping] = useState(false);
   const [rateLimitWarning, setRateLimitWarning] = useState(false);
   const [showGrounding, setShowGrounding] = useState(false);
-  const [finalQuote, setFinalQuote] = useState('');
+
 
   // --- Crisis State ---
   const [showCrisisModal, setShowCrisisModal] = useState(false);
@@ -740,17 +740,24 @@ export default function ChatRoomView({ onBack }) {
     setIsTyping(false);
     setPhase('finished');
 
-    // Generate AI Quote via server
-    try {
-      const quoteHistory = [
-        ...messages.slice(-5),
-        { role: 'user', parts: [{ text: `Buatkan SATU kalimat penyemangat singkat yang hangat untuk ${userData.name || 'seseorang'} yang baru selesai berbagi cerita tentang "${userData.subtopic || category?.title}". Jangan pakai tanda kutip atau emoji berlebihan.` }] }
-      ];
-      const result = await callChatAPI({ history: quoteHistory, userData, category, currentRiskLevel, mode: 'quote' });
-      setFinalQuote(result.text || "Kamu sudah luar biasa berani hari ini. Langkah kecilmu sangat berarti!");
-    } catch (_) {
-      setFinalQuote("Kamu sudah luar biasa berani hari ini. Langkah kecilmu sangat berarti!");
+    // Add first message
+    const msgsToAdd = [{
+      id: Date.now().toString(),
+      role: 'model',
+      parts: [{ text: `Oke sampai jumpa lagi. Terima kasih sudah berbagi cerita dengan Kai 💙` }],
+      timestamp: new Date().toISOString()
+    }];
+
+    if (!loggedInUser) {
+      msgsToAdd.push({
+        id: (Date.now() + 1).toString(),
+        role: 'model',
+        parts: [{ text: `Oh iya, kalau kamu mau percakapan kita tersimpan dan bisa dibaca lagi kapan saja, kamu bisa daftar atau login pakai Google-mu lho.` }],
+        timestamp: new Date().toISOString()
+      });
     }
+
+    setMessages(prev => [...prev, ...msgsToAdd]);
   };
 
   const handleSelesaiTanpaLogin = async () => {
@@ -836,35 +843,21 @@ export default function ChatRoomView({ onBack }) {
     if (phase === 'finished') {
       return (
         <div className="flex flex-col gap-3">
-          {finalQuote && (
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
-              <p className="text-sm italic font-medium text-indigo-800 mb-3">"{finalQuote}"</p>
-              <button
-                onClick={() => navigator.share?.({ title: 'Pesan dari Kai', text: `"${finalQuote}" - Kai (Kancah Ate)` }).catch(console.error)}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all"
-              >
-                Bagikan Pesan Kai
-              </button>
-            </div>
-          )}
-          <div className="border-t border-slate-100 pt-3">
+          <div className="pt-2">
             {!loggedInUser ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-center text-sm font-medium text-slate-700">Oh iya, kalau kamu mau percakapan kita tersimpan dan bisa dibaca lagi kapan saja, kamu bisa daftar atau login pakai Google-mu lho.</p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    onClick={handleDaftarSimpan}
-                    className="flex-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-4 py-3 rounded-xl text-sm font-bold shadow-md hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-                  >
-                    Daftar / Login
-                  </button>
-                  <button
-                    onClick={handleSelesaiTanpaLogin}
-                    className="flex-1 bg-white border border-slate-200 text-slate-500 px-4 py-3 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all flex items-center justify-center"
-                  >
-                    Tidak, terima kasih
-                  </button>
-                </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={handleDaftarSimpan}
+                  className="flex-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-4 py-3.5 rounded-xl text-sm font-bold shadow-md hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                >
+                  Daftar / Login
+                </button>
+                <button
+                  onClick={handleSelesaiTanpaLogin}
+                  className="flex-1 bg-white border border-slate-200 text-slate-500 px-4 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all flex items-center justify-center"
+                >
+                  Tidak, terima kasih
+                </button>
               </div>
             ) : (
               <>
