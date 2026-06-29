@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -62,6 +62,7 @@ function LoginPage() {
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileRef = useRef(null);
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -74,7 +75,7 @@ function LoginPage() {
     setSuccessMsg('');
 
     if (!turnstileToken && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-      setErrorMsg('Harap selesaikan verifikasi keamanan.');
+      setErrorMsg('Harap selesaikan verifikasi keamanan terlebih dahulu.');
       setLoading(false);
       return;
     }
@@ -97,6 +98,8 @@ function LoginPage() {
       setName('');
       setPassword('');
       setTurnstileToken('');
+      // Reset Turnstile widget for fresh token
+      if (turnstileRef.current) turnstileRef.current.reset();
     } catch (err) {
       setErrorMsg(err.message || 'Terjadi kesalahan saat mendaftar.');
     } finally {
@@ -110,7 +113,7 @@ function LoginPage() {
     setErrorMsg('');
 
     if (!turnstileToken && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) {
-      setErrorMsg('Harap selesaikan verifikasi keamanan.');
+      setErrorMsg('Harap selesaikan verifikasi keamanan terlebih dahulu.');
       setLoading(false);
       return;
     }
@@ -290,7 +293,7 @@ function LoginPage() {
               {['Masuk', 'Daftar'].map((tab, i) => (
                 <button
                   key={tab}
-                  onClick={() => { setIsLogin(i === 0); setErrorMsg(''); setSuccessMsg(''); }}
+                  onClick={() => { setIsLogin(i === 0); setErrorMsg(''); setSuccessMsg(''); setTurnstileToken(''); if (turnstileRef.current) turnstileRef.current.reset(); }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-200"
                   style={
                     (i === 0) === isLogin
@@ -466,10 +469,11 @@ function LoginPage() {
                 {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
                    <div className="mt-2 w-full flex justify-center">
                      <Turnstile 
+                       ref={turnstileRef}
                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} 
-                       onSuccess={(token) => setTurnstileToken(token)}
-                       onError={() => setErrorMsg('Gagal memuat sistem keamanan')}
-                       onExpire={() => setTurnstileToken('')}
+                       onSuccess={(token) => { setTurnstileToken(token); setErrorMsg(''); }}
+                       onError={() => setErrorMsg('Gagal verifikasi keamanan. Coba muat ulang halaman.')}
+                       onExpire={() => { setTurnstileToken(''); if (turnstileRef.current) turnstileRef.current.reset(); }}
                      />
                    </div>
                 )}

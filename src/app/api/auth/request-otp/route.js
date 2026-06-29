@@ -24,6 +24,9 @@ export async function POST(request) {
       const turnstileFormData = new URLSearchParams();
       turnstileFormData.append('secret', process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY);
       turnstileFormData.append('response', turnstileToken);
+      // Tambahkan IP user untuk akurasi verifikasi
+      const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip');
+      if (ip) turnstileFormData.append('remoteip', ip);
 
       const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method: 'POST',
@@ -32,7 +35,8 @@ export async function POST(request) {
 
       const turnstileData = await turnstileRes.json();
       if (!turnstileData.success) {
-        return NextResponse.json({ success: false, error: 'Gagal verifikasi keamanan (Turnstile)' }, { status: 400 });
+        console.error('[Login OTP] Turnstile verification failed:', JSON.stringify(turnstileData));
+        return NextResponse.json({ success: false, error: 'Gagal verifikasi keamanan (Turnstile). Coba muat ulang halaman.' }, { status: 400 });
       }
     } else if (process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY && !turnstileToken) {
       return NextResponse.json({ success: false, error: 'Harap selesaikan verifikasi keamanan' }, { status: 400 });
