@@ -5,27 +5,63 @@ import { sql } from 'drizzle-orm';
 
 export async function getDatabaseStats() {
   try {
-    // Query PostgreSQL internal tables for metrics
-    const statsQuery = await db.execute(sql`
+    // 1. Dapatkan daftar tabel user (bukan system tables)
+    const tablesQuery = await db.execute(sql`
       SELECT 
-        relname as table_name, 
-        n_live_tup as row_count, 
-        pg_size_pretty(pg_total_relation_size(C.oid)) as total_size,
-        pg_total_relation_size(C.oid) as size_bytes
-      FROM pg_class C 
-      LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace) 
-      LEFT JOIN pg_stat_user_tables S ON (S.relid = C.oid)
-      WHERE nspname NOT IN ('pg_catalog', 'information_schema') 
-        AND relkind = 'r'
-        AND relname NOT LIKE 'pg_%'
-        AND relname NOT LIKE 'sql_%'
-      ORDER BY size_bytes DESC;
+        tablename as table_name
+      FROM pg_tables 
+      WHERE schemaname = 'public'
+      ORDER BY tablename;
     `);
 
-    // Get connection status (if it didn't throw, it's connected)
+    const tableNames = (tablesQuery.rows || tablesQuery).map(t => t.table_name);
+
+    // 2. Untuk setiap tabel, hitung row count dan size secara akurat
+    const tableStats = [];
+
+    for (const tableName of tableNames) {
+      try {
+        // COUNT(*) — akurat, tidak tergantung ANALYZE
+        const countResult = await db.execute(
+          sql.raw(`SELECT COUNT(*) as row_count FROM "${tableName}"`)
+        );
+        const rowCount = Number(
+          (countResult.rows || countResult)[0]?.row_count || 0
+        );
+
+        // pg_total_relation_size — ukuran tabel + index
+        const sizeResult = await db.execute(
+          sql.raw(`
+            SELECT 
+              pg_total_relation_size('"${tableName}"') as size_bytes,
+              pg_size_pretty(pg_total_relation_size('"${tableName}"')) as total_size
+          `)
+        );
+        const sizeRow = (sizeResult.rows || sizeResult)[0] || {};
+
+        tableStats.push({
+          table_name: tableName,
+          row_count: rowCount,
+          size_bytes: Number(sizeRow.size_bytes || 0),
+          total_size: sizeRow.total_size || '0 bytes',
+        });
+      } catch (tableErr) {
+        console.error(`Error fetching stats for table "${tableName}":`, tableErr.message);
+        tableStats.push({
+          table_name: tableName,
+          row_count: 0,
+          size_bytes: 0,
+          total_size: 'Error',
+        });
+      }
+    }
+
+    // Sort by size descending
+    tableStats.sort((a, b) => b.size_bytes - a.size_bytes);
+
     return {
       success: true,
-      data: statsQuery.rows || statsQuery,
+      data: tableStats,
       status: 'connected',
     };
   } catch (error) {
